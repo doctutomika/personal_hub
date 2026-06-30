@@ -1,0 +1,21 @@
+# Personal Hub — repositório de publicação (GitHub Pages).
+# Regra de privacidade: este repo deve conter APENAS docs/ (app cifrado + PWA).
+# Tudo que possa ter dado pessoal EM CLARO fica de fora por padrão.
+
+/_app/
+/data/
+/build/
+/state/
+/signals/
+
+# Nenhum .json de dados deve subir; abrimos exceção só pro manifest do PWA.
+*.json
+!docs/manifest.json
+
+build-web.mjs
+app-v2.html
+CRON-HANDOFF.md
+GITHUB-HANDOFF.md
+preview.html
+
+.DS_Store
