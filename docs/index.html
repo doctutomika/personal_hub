@@ -252,6 +252,23 @@ a{color:inherit}
   .weekgrid{grid-template-columns:1fr;gap:10px}
   .day-body{height:auto;max-height:none;overflow:visible}
 }
+
+/* ===== MIR: barra de ações + card-ponte de saúde no DID ===== */
+.mir-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.did-teaser{border-left:5px solid #1a4d4d;margin-top:14px}
+.did-teaser h3{font-family:var(--serif);font-size:16px;color:#1a4d4d;display:flex;gap:7px;align-items:center;margin-bottom:4px}
+.did-teaser .btn{margin-top:10px;background:#1a4d4d}
+.did-teaser .btn:hover{background:#123838}
+
+/* ===== IMPRESSÃO (Exportar PDF do MIR): isola o #view, esconde a casca ===== */
+@media print{
+  .sidebar,.nav-ov,.topbar,#hubSync,.toast,.overlay,.no-print,.mir-bar,.did-bar{display:none!important}
+  .app{display:block}
+  .main{margin:0!important}
+  .content{padding:0!important;max-width:none}
+  html,body,.app,.main,.content{background:#fff!important}
+  .mir{border:0!important;border-radius:0!important}
+}
 </style>
 
 
@@ -303,6 +320,7 @@ a{color:inherit}
   var RUN={
     getBootstrap:function(){return flush().then(function(){if(canNet())return getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));return cget('bootstrap',EMPTY);});return cget('bootstrap',EMPTY);}).catch(function(){return cget('bootstrap',EMPTY);});},
     getDID:function(){if(canNet())return getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);return cget('did',null);}).catch(function(){return cget('did',null);});return Promise.resolve(cget('did',null));},
+    getMIR:function(){if(canNet())return getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);return cget('mir',null);}).catch(function(){return cget('mir',null);});return Promise.resolve(cget('mir',null));},
     getWeather:function(){if(canNet())return getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);return cget('weather',null);}).catch(function(){return cget('weather',null);});return Promise.resolve(cget('weather',null));},
     listDIDs:function(){if(canNet())return getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);return cget('dids',[]);}).catch(function(){return cget('dids',[]);});return Promise.resolve(cget('dids',[]));},
     getDIDByName:function(name){if(canNet())return getJSON('didByName','&name='+encodeURIComponent(name)).catch(function(){return null;});return Promise.resolve(null);},
@@ -316,7 +334,7 @@ a{color:inherit}
   function mk(){var ok=null,er=null;var a={withSuccessHandler:function(f){ok=f;return a;},withFailureHandler:function(f){er=f;return a;}};Object.keys(RUN).forEach(function(n){a[n]=function(){var ar=arguments;Promise.resolve().then(function(){return RUN[n].apply(null,ar);}).then(function(r){if(ok)ok(r);},function(e){if(er)er(e);});return a;};});return a;}
   window.google={script:{get run(){return mk();}}};
   function setup(){var g=document.getElementById('hubSetup');if(!g)return;var ai=document.getElementById('hs_api');if(ai)ai.value=API;g.style.display=(TOKEN?'none':'flex');var go=document.getElementById('hs_go');if(go)go.onclick=function(){var ap=(document.getElementById('hs_api').value||'').trim(),tk=(document.getElementById('hs_tok').value||'').trim();if(!tk){document.getElementById('hs_err').textContent='Cole o token.';return;}API=ap;TOKEN=tk;try{localStorage.setItem('hub_api',ap);localStorage.setItem('hub_token',tk);}catch(e){}g.style.display='none';if(window.load)window.load();flush();};}
-  function warm(){if(!canNet())return;getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);}).catch(function(){});getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);}).catch(function(){});getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);}).catch(function(){});getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));}).catch(function(){});}
+  function warm(){if(!canNet())return;getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);}).catch(function(){});getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);}).catch(function(){});getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);}).catch(function(){});getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);}).catch(function(){});getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));}).catch(function(){});}
   function boot(){badge();setup();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});flush().then(warm);}
   if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
   window.__hubReset=function(){['hub_token','hub_api'].forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});location.reload();};
@@ -381,8 +399,8 @@ var MON=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'
 var MONFULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 /* ============================ SHELL / ROUTER ============================ */
-var NAV=[{k:'agenda',ic:'🗓️',t:'Agenda'},{k:'did',ic:'📰',t:'DID'},{k:'ind',ic:'📊',t:'Indicadores'},{k:'sys',ic:'⚙️',t:'Sistema'}];
-var page='agenda';
+var NAV=[{k:'agenda',ic:'🗓️',t:'Agenda'},{k:'did',ic:'📰',t:'DID · Mercados'},{k:'mir',ic:'🩺',t:'MIR Health'},{k:'ind',ic:'📊',t:'Indicadores'},{k:'sys',ic:'⚙️',t:'Sistema'}];
+var page=(function(){try{var v=localStorage.getItem('hub_view');return (v&&NAV.some(function(n){return n.k===v;}))?v:'agenda';}catch(e){return 'agenda';}})();
 var TODAY=(window.__HUB_TODAY?new Date(window.__HUB_TODAY+'T00:00:00'):new Date()); TODAY.setHours(0,0,0,0); // data real (harness pode fixar via __HUB_TODAY)
 /** Recalcula "hoje" (o app pode ficar aberto virando o dia). Retorna true se a data mudou. */
 function refreshToday(){ if(window.__HUB_TODAY)return false; var n=new Date(); n.setHours(0,0,0,0); if(isoOf(n)!==isoOf(TODAY)){TODAY=n; return true;} return false; }
@@ -395,11 +413,12 @@ function toast(t){var e=el('toast');e.textContent=t;e.classList.add('show');clea
 function toggleNav(){document.body.classList.toggle('nav-open');}
 function closeNav(){document.body.classList.remove('nav-open');}
 function buildNav(){el('sbnav').innerHTML=NAV.map(function(n){return '<button class="sb-link'+(n.k===page?' active':'')+'" onclick="go(\''+n.k+'\')"><span class="ico">'+n.ic+'</span>'+n.t+'</button>';}).join('');}
-function go(k){page=k;closeNav();buildNav();render();}
+function go(k){page=k;try{localStorage.setItem('hub_view',k);}catch(e){}closeNav();buildNav();render();}
+function setView(k){go(k);}
 function render(){
   refreshToday(); el('todayStr').textContent=pad(TODAY.getDate())+'/'+pad(TODAY.getMonth()+1);
   el('topTitle').textContent=(NAV.find(function(n){return n.k===page;})||{}).t||'Hub';
-  if(page==='agenda')renderAgenda();else if(page==='did')renderDID();else if(page==='ind')renderInd();else renderSys();
+  if(page==='agenda')renderAgenda();else if(page==='did')renderDID();else if(page==='mir')renderMIR();else if(page==='ind')renderInd();else renderSys();
   window.scrollTo(0,0);
 }
 el('todayStr').textContent=pad(TODAY.getDate())+'/'+pad(TODAY.getMonth()+1);
@@ -652,6 +671,8 @@ function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>O q
 function didSecHTML(secoes){return '<div class="didgrid">'+(secoes||[]).map(function(s){return '<div class="card sec '+(s.id||'')+'"><h3>'+s.nome+'</h3><div class="feeds">'+(s.feeds||'')+'</div>'+((s.tickers&&s.tickers.length)?didTickerHTML(s.tickers,'tk-mini',''):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}).join('')+'</div>';}
 function didLeituraHTML(L){if(!L)return '';return '<div class="leitura"><div class="leitura-tag">'+esc(L.rotulo||'📚 Leitura do dia')+(L.assunto?' · <span>'+esc(L.assunto)+'</span>':'')+'</div><h4>'+esc(L.titulo||'')+'</h4><p>'+esc(L.resumo||'')+'</p>'+(L.porque?'<div class="why"><b>Por que importa:</b> '+esc(L.porque)+'</div>':'')+didFontesHTML(L)+'</div>';}
 function didTickerHTML(arr,cls,lab){if(!arr||!arr.length)return '';return '<div class="ticker'+(cls?' '+cls:'')+'">'+(lab?'<div class="tk tk-lab">'+esc(lab)+'</div>':'')+arr.map(function(t){return '<div class="tk"><span class="s">'+esc(t.s)+'</span><span class="v">'+esc(t.v)+(t.d?' <span class="'+t.d+'">'+(t.d==='up'?'▲':'▼')+'</span>':'')+'</span></div>';}).join('')+'</div>';}
+/** Card-ponte de saúde no DID → abre a view MIR Health. */
+function didTeaserHTML(t){if(!t)return '';var items=(t.itens||[]).map(function(it){var f=it.fonte?('<div class="src">Fonte: <a href="'+(it.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(it.fonte.nome||'')+'</a></div>'):'';return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+f+'</div>';}).join('');return '<div class="card did-teaser"><h3>'+esc(t.titulo||'🩺 Saúde hoje → MIR Health')+'</h3>'+items+'<button class="btn btn-primary" onclick="setView(\'mir\')">'+esc(t.cta||'Abrir MIR Health')+' →</button></div>';}
 function renderDID(){
   if(!didLoaded){didLoaded=true;
     api('listDIDs').then(function(l){didList=l||[];if(didList.length)renderDID();}).catch(function(){});
@@ -663,7 +684,7 @@ function renderDID(){
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
   if(d.abas&&d.abas.length){
     if(!d.abas.some(function(a){return a.id===didTab;}))didTab=d.abas[0].id;
-    h+='<div class="did-tabs">'+d.abas.map(function(a){return '<button class="'+(a.id===didTab?'active':'')+'" onclick="didSetTab(\''+a.id+'\')">'+esc(a.nome)+'</button>';}).join('')+'</div>';
+    if(d.abas.length>1)h+='<div class="did-tabs">'+d.abas.map(function(a){return '<button class="'+(a.id===didTab?'active':'')+'" onclick="didSetTab(\''+a.id+'\')">'+esc(a.nome)+'</button>';}).join('')+'</div>';   // 1 aba (só mercados) → sem switcher
     var aba=d.abas.filter(function(a){return a.id===didTab;})[0]||d.abas[0];
     h+=didTickerHTML(aba.id==='saude'?d.ticker_saude:d.ticker,'','');   // sleeve por aba: Saúde→ticker_saude, Mercados→ticker geral
     h+=didLeadHTML(aba.lead)+didLeituraHTML(aba.leitura)+didSecHTML(aba.secoes);
@@ -671,6 +692,7 @@ function renderDID(){
     h+=didTickerHTML(d.ticker,'','');
     h+=didLeadHTML(d.lead)+didSecHTML(d.secoes);
   }
+  h+=didTeaserHTML(d.saude_teaser);   // card-ponte → MIR Health (saúde não se repete no DID)
   if(d.note)h+='<div class="did-note">⚙️ '+esc(d.note).replace(/^⚙️\s*/,'')+'</div>';
   el('view').innerHTML=h;
 }
@@ -681,6 +703,89 @@ function reloadDID(){toast('Atualizando DID…');
 function loadDIDByName(name){if(!name)return;toast('Carregando edição…');didCur=name;
   api('getDIDByName',name).then(function(x){if(x){DID=x;renderDID();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
+
+/* ============================ MIR HEALTH (identidade IHB) ============================ */
+var MIR=null, mirLoaded=false;
+var MIR_LOGO='<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 336 153.000002" preserveAspectRatio="xMidYMid meet"><defs><clipPath id="42ba0e0795"><path d="M 1.089844 18.179688 L 112.859375 18.179688 L 112.859375 129.949219 L 1.089844 129.949219 Z M 1.089844 18.179688 "/></clipPath><clipPath id="e391255e19"><path d="M 56.976562 18.179688 C 26.113281 18.179688 1.089844 43.199219 1.089844 74.0625 C 1.089844 104.929688 26.113281 129.949219 56.976562 129.949219 C 87.839844 129.949219 112.859375 104.929688 112.859375 74.0625 C 112.859375 43.199219 87.839844 18.179688 56.976562 18.179688 Z M 56.976562 18.179688 "/></clipPath><clipPath id="4e1245ae2a"><path d="M 0.0898438 0.179688 L 111.859375 0.179688 L 111.859375 111.949219 L 0.0898438 111.949219 Z M 0.0898438 0.179688 "/></clipPath><clipPath id="059a6456e2"><path d="M 55.976562 0.179688 C 25.113281 0.179688 0.0898438 25.199219 0.0898438 56.0625 C 0.0898438 86.929688 25.113281 111.949219 55.976562 111.949219 C 86.839844 111.949219 111.859375 86.929688 111.859375 56.0625 C 111.859375 25.199219 86.839844 0.179688 55.976562 0.179688 Z M 55.976562 0.179688 "/></clipPath><clipPath id="9147518674"><rect x="0" width="112" y="0" height="112"/></clipPath><clipPath id="c19f60a6f2"><path d="M 3.648438 21 L 110.203125 21 L 110.203125 128 L 3.648438 128 Z M 3.648438 21 "/></clipPath><clipPath id="e50e569429"><path d="M 17 79 L 44 79 L 44 151.007812 L 17 151.007812 Z M 17 79 "/></clipPath><clipPath id="3ee946d0fb"><path d="M 51 7.941406 L 95 7.941406 L 95 121 L 51 121 Z M 51 7.941406 "/></clipPath></defs><g clip-path="url(#42ba0e0795)"><g clip-path="url(#e391255e19)"><g transform="matrix(1,0,0,1,1,18)"><g clip-path="url(#9147518674)"><g clip-path="url(#4e1245ae2a)"><g clip-path="url(#059a6456e2)"><path style="fill:#f3f0e6" d="M 0.0898438 0.179688 L 111.859375 0.179688 L 111.859375 111.949219 L 0.0898438 111.949219 Z M 0.0898438 0.179688 "/></g></g></g></g></g><g clip-path="url(#c19f60a6f2)"><path style="fill:#2f3e38" d="M 30.269531 28.53125 C 37.804688 24.152344 46.371094 21.695312 55.101562 21.390625 L 55.101562 24.011719 C 46.816406 24.320312 38.726562 26.636719 31.582031 30.792969 C 30.96875 31.15625 30.160156 30.933594 29.796875 30.316406 C 29.433594 29.675781 29.65625 28.894531 30.269531 28.53125 Z M 56.886719 21.363281 L 56.886719 23.984375 L 56.972656 23.984375 C 60.792969 23.984375 64.503906 24.402344 68.074219 25.210938 L 68.074219 22.535156 C 64.503906 21.78125 60.765625 21.363281 56.972656 21.363281 Z M 77.921875 28.503906 C 80.433594 29.648438 82.804688 30.988281 85.09375 32.492188 L 85.09375 29.398438 C 82.804688 27.972656 80.433594 26.71875 77.921875 25.660156 Z M 94.914062 37.292969 L 94.914062 40.363281 C 94.914062 40.585938 94.859375 40.78125 94.773438 40.949219 C 102.753906 49.902344 107.582031 61.675781 107.582031 74.566406 C 107.582031 89.742188 100.855469 103.972656 89.167969 113.625 C 88.609375 114.070312 88.523438 114.910156 89 115.464844 C 89.25 115.773438 89.640625 115.941406 90.003906 115.941406 C 90.3125 115.941406 90.589844 115.828125 90.839844 115.632812 C 103.144531 105.480469 110.203125 90.496094 110.203125 74.539062 C 110.203125 60.085938 104.371094 46.917969 94.914062 37.292969 Z M 21.121094 35.257812 C 10.070312 45.328125 3.738281 59.667969 3.738281 74.59375 C 3.738281 88.070312 8.789062 100.402344 17.074219 109.773438 L 17.074219 105.703125 C 10.351562 97.109375 6.363281 86.3125 6.363281 74.59375 C 6.363281 60.394531 12.386719 46.777344 22.878906 37.179688 C 23.40625 36.707031 23.4375 35.871094 22.960938 35.339844 C 22.460938 34.808594 21.652344 34.78125 21.121094 35.257812 Z M 26.921875 115.300781 L 26.921875 118.507812 C 29.183594 120.070312 31.582031 121.4375 34.09375 122.636719 L 34.09375 119.734375 C 31.554688 118.453125 29.15625 116.972656 26.921875 115.300781 Z M 76.445312 122.777344 C 76.195312 122.105469 75.441406 121.742188 74.769531 122.023438 C 69.078125 124.144531 63.109375 125.230469 56.972656 125.230469 C 52.453125 125.230469 48.070312 124.644531 43.914062 123.53125 L 43.914062 126.234375 C 48.097656 127.296875 52.480469 127.855469 56.972656 127.855469 C 63.414062 127.855469 69.722656 126.710938 75.691406 124.476562 C 76.359375 124.199219 76.695312 123.445312 76.445312 122.777344 Z M 76.445312 122.777344 "/></g><g clip-path="url(#e50e569429)"><path style="fill:#e5221c" d="M 26.921875 100.316406 L 26.921875 118.675781 C 26.921875 119.429688 26.308594 120.015625 25.585938 120.015625 L 22.90625 120.015625 L 22.90625 130.921875 C 22.90625 131.175781 22.710938 131.371094 22.460938 131.371094 L 21.566406 131.371094 C 21.316406 131.371094 21.121094 131.175781 21.121094 130.921875 L 21.121094 120.015625 L 18.441406 120.015625 C 17.6875 120.015625 17.101562 119.402344 17.101562 118.675781 L 17.101562 100.316406 C 17.101562 99.5625 17.714844 98.976562 18.441406 98.976562 L 25.613281 98.976562 C 26.308594 98.976562 26.921875 99.59375 26.921875 100.316406 Z M 42.574219 104.363281 L 39.898438 104.363281 L 39.898438 80.621094 C 39.898438 80.203125 39.703125 79.894531 39.449219 79.894531 L 38.558594 79.894531 C 38.304688 79.894531 38.109375 80.230469 38.109375 80.621094 L 38.109375 104.363281 L 35.433594 104.363281 C 34.679688 104.363281 34.09375 104.976562 34.09375 105.703125 L 34.09375 150.007812 C 34.09375 150.757812 34.707031 151.34375 35.433594 151.34375 L 42.601562 151.34375 C 43.355469 151.34375 43.941406 150.730469 43.941406 150.007812 L 43.941406 105.703125 C 43.914062 104.949219 43.300781 104.363281 42.574219 104.363281 Z M 42.574219 104.363281 "/></g><g clip-path="url(#3ee946d0fb)"><path style="fill:#2fa82f" d="M 60.933594 38.101562 L 60.933594 118.730469 C 60.933594 119.457031 60.347656 120.042969 59.621094 120.042969 L 52.394531 120.042969 C 51.671875 120.042969 51.085938 119.457031 51.085938 118.730469 L 51.085938 38.101562 C 51.085938 37.375 51.671875 36.789062 52.394531 36.789062 L 55.101562 36.789062 L 55.101562 13.96875 C 55.101562 13.71875 55.296875 13.523438 55.546875 13.523438 L 56.441406 13.523438 C 56.691406 13.523438 56.886719 13.71875 56.886719 13.96875 L 56.886719 36.789062 L 59.59375 36.789062 C 60.320312 36.789062 60.933594 37.375 60.933594 38.101562 Z M 76.585938 7.941406 L 69.414062 7.941406 C 68.660156 7.941406 68.074219 8.554688 68.074219 9.28125 L 68.074219 69.238281 C 68.074219 69.992188 68.6875 70.578125 69.414062 70.578125 L 72.09375 70.578125 L 72.09375 75.179688 C 72.09375 75.429688 72.289062 75.625 72.539062 75.625 L 73.429688 75.625 C 73.683594 75.625 73.878906 75.429688 73.878906 75.179688 L 73.878906 70.578125 L 76.554688 70.578125 C 77.308594 70.578125 77.894531 69.960938 77.894531 69.238281 L 77.894531 9.28125 C 77.921875 8.554688 77.308594 7.941406 76.585938 7.941406 Z M 93.574219 20.691406 L 90.898438 20.691406 L 90.898438 15.222656 C 90.898438 14.972656 90.703125 14.777344 90.449219 14.777344 L 89.53125 14.777344 C 89.277344 14.777344 89.082031 14.972656 89.082031 15.222656 L 89.082031 20.664062 L 86.40625 20.664062 C 85.652344 20.664062 85.066406 21.277344 85.066406 22.003906 L 85.066406 40.363281 C 85.066406 41.113281 85.679688 41.699219 86.40625 41.699219 L 89.082031 41.699219 L 89.082031 43.402344 C 89.082031 43.652344 89.277344 43.847656 89.53125 43.847656 L 90.449219 43.847656 C 90.703125 43.847656 90.898438 43.652344 90.898438 43.402344 L 90.898438 41.699219 L 93.574219 41.699219 C 94.105469 41.699219 94.550781 41.394531 94.773438 40.949219 C 94.859375 40.78125 94.914062 40.558594 94.914062 40.363281 L 94.914062 22.03125 C 94.914062 21.277344 94.328125 20.691406 93.574219 20.691406 Z M 93.574219 20.691406 "/></g><g transform="matrix(1,0,0,1,124,24)"><g style="fill:#f3f0e6"><g transform="translate(0.805549, 51.896658)"><path d="M 88.734375 0 L 70.234375 0 L 70.234375 -28.109375 L 53.703125 0 L 39.90625 0 L 23.40625 -28.109375 L 23.40625 0 L 4.921875 0 L 4.921875 -44.09375 L 26.890625 -44.09375 L 46.828125 -12.59375 L 66.734375 -44.09375 L 88.734375 -44.09375 Z M 88.734375 0 "/></g><g transform="translate(94.449913, 51.896658)"><path d="M 23.40625 0 L 4.921875 0 L 4.921875 -44.09375 L 23.40625 -44.09375 Z M 23.40625 0 "/></g><g transform="translate(122.776719, 51.896658)"><path d="M 65.109375 0 L 47.625 0 C 46.820312 -1.101562 46.257812 -2.515625 45.9375 -4.234375 C 45.644531 -5.566406 45.210938 -6.875 44.640625 -8.15625 C 44.066406 -9.4375 43.078125 -10.5 41.671875 -11.34375 C 40.273438 -12.195312 38.191406 -12.65625 35.421875 -12.71875 L 23.40625 -12.71875 L 23.40625 0 L 4.921875 0 L 4.921875 -44.09375 L 35 -44.09375 C 42.1875 -44.09375 47.984375 -43.550781 52.390625 -42.46875 C 56.804688 -41.394531 60.03125 -39.707031 62.0625 -37.40625 C 64.09375 -35.101562 65.109375 -32.097656 65.109375 -28.390625 C 65.109375 -25.296875 64.40625 -22.691406 63 -20.578125 C 61.59375 -18.472656 59.375 -16.804688 56.34375 -15.578125 C 59.269531 -14.367188 61.171875 -12.914062 62.046875 -11.21875 C 62.921875 -9.53125 63.457031 -7.675781 63.65625 -5.65625 C 63.863281 -3.851562 64.347656 -1.96875 65.109375 0 Z M 23.40625 -23.59375 L 33.984375 -23.625 C 36.929688 -23.625 39.253906 -23.753906 40.953125 -24.015625 C 42.648438 -24.285156 43.90625 -24.648438 44.71875 -25.109375 C 45.53125 -25.578125 46.046875 -26.09375 46.265625 -26.65625 C 46.492188 -27.21875 46.609375 -27.796875 46.609375 -28.390625 C 46.609375 -28.984375 46.492188 -29.566406 46.265625 -30.140625 C 46.046875 -30.710938 45.53125 -31.226562 44.71875 -31.6875 C 43.90625 -32.144531 42.648438 -32.507812 40.953125 -32.78125 C 39.253906 -33.050781 36.929688 -33.1875 33.984375 -33.1875 L 23.40625 -33.1875 Z M 23.40625 -23.59375 "/></g></g></g><g transform="matrix(1,0,0,1,124,93)"><g style="fill:#f3f0e6"><g transform="translate(1.330246, 26.581787)"><path d="M 32.5625 0 L 23.3125 0 L 23.3125 -8.890625 L 11.703125 -8.890625 L 11.703125 0 L 2.453125 0 L 2.453125 -22.03125 L 11.703125 -22.03125 L 11.703125 -13.125 L 23.3125 -13.125 L 23.3125 -22.03125 L 32.5625 -22.03125 Z M 32.5625 0 "/></g><g transform="translate(36.346819, 26.581787)"><path d="M 29 0 L 2.453125 0 L 2.453125 -22.03125 L 27.78125 -22.03125 L 27.78125 -16.59375 L 11.703125 -16.59375 L 11.703125 -13.125 L 25.296875 -13.125 L 25.296875 -8.890625 L 11.703125 -8.890625 L 11.703125 -5.453125 L 29 -5.453125 Z M 29 0 "/></g><g transform="translate(66.57165, 26.581787)"><path d="M 37.015625 0 L 27.640625 0 L 25.578125 -3.609375 L 11.671875 -3.609375 L 9.59375 0 L 0.234375 0 L 14.328125 -22.015625 L 22.921875 -22.015625 Z M 22.453125 -9.0625 L 18.625 -15.734375 L 14.796875 -9.0625 Z M 22.453125 -9.0625 "/></g><g transform="translate(103.815154, 26.581787)"><path d="M 28.1875 0 L 2.453125 0 L 2.453125 -22.03125 L 11.703125 -22.03125 L 11.703125 -5.453125 L 28.1875 -5.453125 Z M 28.1875 0 "/></g><g transform="translate(126.467755, 26.581787)"><path d="M 18.796875 0 L 9.546875 0 L 9.546875 -16.59375 L 0.921875 -16.59375 L 0.921875 -22.03125 L 27.421875 -22.03125 L 27.421875 -16.59375 L 18.796875 -16.59375 Z M 18.796875 0 "/></g><g transform="translate(154.818893, 26.581787)"><path d="M 32.5625 0 L 23.3125 0 L 23.3125 -8.890625 L 11.703125 -8.890625 L 11.703125 0 L 2.453125 0 L 2.453125 -22.03125 L 11.703125 -22.03125 L 11.703125 -13.125 L 23.3125 -13.125 L 23.3125 -22.03125 L 32.5625 -22.03125 Z M 32.5625 0 "/></g></g></g></svg>';
+var MIR_CSS=`
+.mir{--green:#1a4d4d;--green-d:#123838;--green-2:#2f3e38;--up:#2fa82f;--down:#e5221c;--gold:#c19f60;--cream:#f3f0e6;--card:#fbfaf4;--ink:#1c2b26;--mut:#5f6b62;--line:#e0dccb;
+  background:var(--cream);color:var(--ink);font-family:Georgia,"Times New Roman","Iowan Old Style",serif;line-height:1.55;font-size:15px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.mir *{box-sizing:border-box}
+.mir .wrap{max-width:900px;margin:0 auto;padding:0 22px 34px}
+.mir header{background:var(--green-d);color:var(--cream);padding:22px;border-bottom:3px solid var(--gold)}
+.mir .hd-in{max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+.mir .logo svg{height:50px;width:auto;display:block}
+.mir .hd-meta{text-align:right;font-size:13px;opacity:.92;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .hd-meta b{color:#fff}
+.mir .tagline{max-width:900px;margin:0 auto;padding:9px 22px 0;font-size:12px;color:var(--mut);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px}
+.mir h2.sec{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--green);margin:30px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--gold);font-weight:800}
+.mir .tk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.mir .tk-blk{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--green);border-radius:6px;padding:12px 14px}
+.mir .tk-blk h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .tk-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-top:1px dashed var(--line)}
+.mir .tk-row:first-of-type{border-top:0}
+.mir .tk-s{font-weight:700}
+.mir .tk-lbl{display:flex;flex-direction:column;line-height:1.15}
+.mir .tk-nm{font-size:10px;color:var(--mut);font-weight:400;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .tk-v{font-variant-numeric:tabular-nums;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;white-space:nowrap}
+.mir .up{color:var(--up)} .mir .down{color:var(--down)}
+.mir .movers{font-size:11.5px;color:var(--mut);margin:8px 2px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .exec{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:6px;padding:14px 18px;margin-bottom:14px}
+.mir .exec ul{margin:0;padding-left:18px} .mir .exec li{margin:7px 0}
+.mir .senti{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mir .s-card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:11px 12px}
+.mir .s-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:6px}
+.mir .s-name{font-size:11px;font-weight:800;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .badge{font-size:10px;font-weight:800;border-radius:20px;padding:2px 9px;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;white-space:nowrap}
+.mir .b-pos{background:var(--up)} .mir .b-neu{background:var(--gold)} .mir .b-neg{background:var(--down)}
+.mir .s-why{font-size:11.5px;color:var(--mut)}
+.mir .blk{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--green);border-radius:6px;padding:4px 18px 14px;margin-bottom:14px}
+.mir .blk.pharma{border-top-color:var(--green)} .mir .blk.medtech{border-top-color:#2f7d5f} .mir .blk.iadigital{border-top-color:var(--gold)} .mir .blk.brasil{border-top-color:#5f8d3a}
+.mir .item{padding:12px 0;border-top:1px solid var(--line)}
+.mir .item:first-of-type{border-top:0}
+.mir .item h4{margin:0 0 5px;font-size:16px;color:var(--green-d);font-family:Georgia,serif}
+.mir .item p{margin:0 0 7px;color:#26332c}
+.mir .why{background:#eef2ea;border-left:3px solid var(--up);border-radius:4px;padding:7px 10px;font-size:13px;margin-bottom:6px}
+.mir .why b{color:var(--green)}
+.mir .src{font-size:12px;color:var(--mut);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .src a{color:var(--green);text-decoration:none;border-bottom:1px solid var(--gold)}
+.mir .leitura{background:#eef2ea;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:6px;padding:12px 18px;margin-bottom:14px}
+.mir .leitura .tag{display:inline-block;background:var(--green);color:var(--cream);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;border-radius:4px;padding:2px 8px;margin-bottom:6px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.mir .leitura h4{margin:2px 0 5px;color:var(--green-d);font-family:Georgia,serif}
+.mir .mon{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 18px}
+.mir .mon ul{margin:8px 0;padding-left:18px} .mir .mon li{margin:6px 0}
+.mir footer{max-width:900px;margin:26px auto 0;padding:14px 22px 0;border-top:2px solid var(--gold);font-size:11.5px;color:var(--mut);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+@media(max-width:640px){.mir .tk-grid,.mir .senti{grid-template-columns:1fr}}
+@media print{.mir .blk,.mir .tk-blk,.mir .s-card,.mir .exec,.mir .mon,.mir .leitura{break-inside:avoid}}
+`;
+function mirBodyHTML(d){
+  var dl=d.data||d.dataLabel||'';
+  var h='<header><div class="hd-in"><div class="logo">'+MIR_LOGO+'</div><div class="hd-meta"><b>'+esc(dl)+'</b><br>'+esc(d.local||'São Paulo')+' · Edição diária</div></div></header>';
+  h+='<div class="tagline">'+esc(d.subtitulo||'Market Insight Report on Health — inteligência condensada do mercado de saúde')+'</div>';
+  h+='<div class="wrap">';
+  h+='<h2 class="sec">Dashboard de mercado — saúde</h2><div class="tk-grid">'+(d.tickers||[]).map(function(b){return '<div class="tk-blk"><h4>'+esc(b.bloco)+'</h4>'+(b.itens||[]).map(function(t){var c=t.d==='up'?'up':(t.d==='down'?'down':'');var ar=t.d==='up'?'▲':(t.d==='down'?'▼':'');return '<div class="tk-row"><span class="tk-lbl"><span class="tk-s">'+esc(t.s)+'</span><span class="tk-nm">'+esc(t.n||'')+'</span></span><span class="tk-v '+c+'">'+esc(t.v)+(ar?' '+ar:'')+'</span></div>';}).join('')+'</div>';}).join('')+'</div>';
+  if(d.top_movers){var up=(d.top_movers.up||[]).map(function(t){return '<span class="up">'+esc(t.s)+' '+esc(t.v)+'</span>';}).join(', ');var dn=(d.top_movers.down||[]).map(function(t){return '<span class="down">'+esc(t.s)+' '+esc(t.v)+'</span>';}).join(', ');h+='<p class="movers">'+(d.tickers_nota?esc(d.tickers_nota)+' ':'')+(up?'<b>Altas:</b> '+up+'. ':'')+(dn?'<b>Baixas:</b> '+dn+'.':'')+'</p>';}
+  else if(d.tickers_nota)h+='<p class="movers">'+esc(d.tickers_nota)+'</p>';
+  h+='<h2 class="sec">Panorama executivo</h2><div class="exec"><ul>'+(d.resumo_executivo||[]).map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
+  h+='<div class="senti">'+(d.sentimento||[]).map(function(s){var b=s.nota==='+'?'b-pos':(s.nota==='-'?'b-neg':'b-neu');var lbl=s.nota_txt?String(s.nota_txt).toUpperCase():(s.nota==='+'?'POSITIVO':(s.nota==='-'?'NEGATIVO':'NEUTRO'));return '<div class="s-card"><div class="s-top"><span class="s-name">'+esc(s.setor)+'</span><span class="badge '+b+'">'+esc(lbl)+'</span></div><div class="s-why">'+esc(s.porque||'')+'</div></div>';}).join('')+'</div>';
+  (d.abas||[]).forEach(function(a){h+='<h2 class="sec">'+esc(a.nome)+'</h2><div class="blk '+(a.id||'')+'">'+(a.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';});
+  if(d.leitura&&d.leitura.length){h+='<h2 class="sec">📚 Ciência &amp; Leitura</h2>'+d.leitura.map(function(L){return '<div class="leitura"><span class="tag">Leitura do dia · via PubMed</span><h4>'+esc(L.titulo)+'</h4><p>'+esc(L.resumo||'')+'</p>'+(L.porque?'<div class="why"><b>Por que importa:</b> '+esc(L.porque)+'</div>':'')+didFontesHTML(L)+'</div>';}).join('');}
+  if(d.monitorar&&d.monitorar.length)h+='<h2 class="sec">🎯 O que monitorar</h2><div class="mon"><ul>'+d.monitorar.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+  h+='</div>';
+  h+='<footer><b>MIR Health</b> — Market Insight Report on Health · '+esc(d.publisher||'IHB Strategies')+' · Edição de '+esc(dl)+' · '+esc(d.local||'São Paulo')+'.'+(d.note?'<br>'+esc(d.note):'')+'</footer>';
+  return h;
+}
+function renderMIR(){
+  if(!document.getElementById('mir-css')){var st=document.createElement('style');st.id='mir-css';st.textContent=MIR_CSS;document.head.appendChild(st);}
+  if(!mirLoaded){mirLoaded=true;api('getMIR').then(function(x){if(x){MIR=x;renderMIR();}}).catch(function(){});}
+  var d=MIR;
+  if(!d){el('view').innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:44px">Carregando MIR Health…<br><small>Se não carregar, confira a conexão.</small></div>';return;}
+  var bar='<div class="mir-bar no-print"><button class="btn btn-sm" onclick="reloadMIR()">↻ Atualizar</button><button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ Baixar HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
+  el('view').innerHTML=bar+'<div class="mir">'+mirBodyHTML(d)+'</div>';
+}
+function reloadMIR(){toast('Atualizando MIR…');api('getMIR').then(function(x){if(x){MIR=x;renderMIR();toast('MIR atualizado');}else toast('Nada novo');}).catch(function(){toast('Falha ao atualizar');});}
+function mirPrint(){window.print();}   /* @media print isola o #view (a casca some) */
+function mirDownloadHTML(){if(!MIR)return;var dl=MIR.data||MIR.dataLabel||'';var doc='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIR Health — '+esc(dl)+'</title><style>body{margin:0;background:#f3f0e6}'+MIR_CSS+'</style></head><body><div class="mir">'+mirBodyHTML(MIR)+'</div></body></html>';var blob=new Blob([doc],{type:'text/html;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='MIR_Health.html';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1500);toast('HTML baixado');}
 
 /* boot */
 buildNav();load();
