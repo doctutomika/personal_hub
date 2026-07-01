@@ -22,6 +22,8 @@
   --hefesto:#2E5E8C; --iamed:#3E8E9C; --qbem:#1FA37A; --ihb:#3D5A80; --deagro:#4E944F;
   /* sub-frentes da aba Saúde (bordas de seção) */
   --suplementar:#1FA37A; --operadoras:#0E7C7B; --prestadores:#2E8BC0; --pharma:#5B6FB5;
+  /* sub-frentes da aba Demais Mercados */
+  --bigtech:#5A54C9; --tech:#0E9AA7;
   --serif:Georgia,"Times New Roman",serif; --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Arial,sans-serif;
   --r:12px; --r-sm:8px; --r-lg:16px; --sh:0 1px 3px rgba(20,22,50,.07); --sh-md:0 8px 24px rgba(20,22,50,.12);
   --sidebar:248px;
@@ -211,6 +213,12 @@ a{color:inherit}
 .sec{border-top:4px solid var(--muted)}
 .sec.saude{border-top-color:var(--saude)}.sec.medtech{border-top-color:var(--medtech)}.sec.crypto{border-top-color:var(--crypto)}.sec.agro{border-top-color:var(--agro)}.sec.consult{border-top-color:var(--consult)}.sec.mkt{border-top-color:var(--mkt)}
 .sec.suplementar{border-top-color:var(--suplementar)}.sec.operadoras{border-top-color:var(--operadoras)}.sec.prestadores{border-top-color:var(--prestadores)}.sec.pharma{border-top-color:var(--pharma)}
+.sec.bigtech{border-top-color:var(--bigtech)}.sec.tech{border-top-color:var(--tech)}
+/* mini-sleeve de tickers dentro do box do setor */
+.ticker.tk-mini{margin:2px 0 10px;border-radius:9px}
+.ticker.tk-mini .tk{padding:5px 10px}
+.ticker.tk-mini .tk .s{font-size:9px}
+.ticker.tk-mini .tk .v{font-size:11.5px}
 /* DID v3: abas + sleeve de saúde + Leitura do dia */
 .did-tabs{display:inline-flex;gap:4px;background:var(--ind-soft);padding:4px;border-radius:11px;margin-bottom:13px}
 .did-tabs button{border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:7px 17px;border-radius:8px;cursor:pointer}
@@ -637,10 +645,11 @@ function saveCfgItem(id,cat,pai){
 function delCfg(id){var c=cfgById(id);if(c&&c.gov==='sistema'){toast('Item do sistema');return;}CFG=CFG.filter(function(x){return x.id!==id&&x.pai!==id;});saveCfg();toast('Removido');renderSys();}
 
 /* ============================ DID ============================ */
-var didLoaded=false, didList=[], didCur='', didTab='saude';
+var didLoaded=false, didList=[], didCur='', didTab=(function(){try{return localStorage.getItem('hub_did_tab')||'saude';}catch(e){return 'saude';}})();
+function didSetTab(id){didTab=id;try{localStorage.setItem('hub_did_tab',id);}catch(e){}renderDID();}
 function didFontesHTML(o){var fontes=(o.fontes&&o.fontes.length)?o.fontes:(o.fonte?[{nome:o.fonte,url:o.url||'#'}]:[]);return fontes.length?'<div class="src">Fonte: '+fontes.map(function(f){return '<a href="'+(f.url||'#')+'" target="_blank" rel="noopener">'+esc(f.nome)+'</a>';}).join(' · ')+'</div>':'';}
 function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>O que importa hoje para suas frentes</h2><ul>'+lead.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>':'';}
-function didSecHTML(secoes){return '<div class="didgrid">'+(secoes||[]).map(function(s){return '<div class="card sec '+(s.id||'')+'"><h3>'+s.nome+'</h3><div class="feeds">'+(s.feeds||'')+'</div>'+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}).join('')+'</div>';}
+function didSecHTML(secoes){return '<div class="didgrid">'+(secoes||[]).map(function(s){return '<div class="card sec '+(s.id||'')+'"><h3>'+s.nome+'</h3><div class="feeds">'+(s.feeds||'')+'</div>'+((s.tickers&&s.tickers.length)?didTickerHTML(s.tickers,'tk-mini',''):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}).join('')+'</div>';}
 function didLeituraHTML(L){if(!L)return '';return '<div class="leitura"><div class="leitura-tag">'+esc(L.rotulo||'📚 Leitura do dia')+(L.assunto?' · <span>'+esc(L.assunto)+'</span>':'')+'</div><h4>'+esc(L.titulo||'')+'</h4><p>'+esc(L.resumo||'')+'</p>'+(L.porque?'<div class="why"><b>Por que importa:</b> '+esc(L.porque)+'</div>':'')+didFontesHTML(L)+'</div>';}
 function didTickerHTML(arr,cls,lab){if(!arr||!arr.length)return '';return '<div class="ticker'+(cls?' '+cls:'')+'">'+(lab?'<div class="tk tk-lab">'+esc(lab)+'</div>':'')+arr.map(function(t){return '<div class="tk"><span class="s">'+esc(t.s)+'</span><span class="v">'+esc(t.v)+(t.d?' <span class="'+t.d+'">'+(t.d==='up'?'▲':'▼')+'</span>':'')+'</span></div>';}).join('')+'</div>';}
 function renderDID(){
@@ -652,14 +661,14 @@ function renderDID(){
   var h='<div class="did-bar">'+sel+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar DID</button></div>';
   h+='<div class="did-mast"><div class="big">DID</div><div class="tl">'+(d.subtitulo||'Jornal pessoal de inteligência de mercado')+'</div>'+
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
-  h+=didTickerHTML(d.ticker,'','');
-  h+=didTickerHTML(d.ticker_saude,'tk-saude','Saúde');
   if(d.abas&&d.abas.length){
     if(!d.abas.some(function(a){return a.id===didTab;}))didTab=d.abas[0].id;
-    h+='<div class="did-tabs">'+d.abas.map(function(a){return '<button class="'+(a.id===didTab?'active':'')+'" onclick="didTab=\''+a.id+'\';renderDID()">'+esc(a.nome)+'</button>';}).join('')+'</div>';
+    h+='<div class="did-tabs">'+d.abas.map(function(a){return '<button class="'+(a.id===didTab?'active':'')+'" onclick="didSetTab(\''+a.id+'\')">'+esc(a.nome)+'</button>';}).join('')+'</div>';
     var aba=d.abas.filter(function(a){return a.id===didTab;})[0]||d.abas[0];
+    h+=didTickerHTML(aba.id==='saude'?d.ticker_saude:d.ticker,'','');   // sleeve por aba: Saúde→ticker_saude, Mercados→ticker geral
     h+=didLeadHTML(aba.lead)+didLeituraHTML(aba.leitura)+didSecHTML(aba.secoes);
   }else{
+    h+=didTickerHTML(d.ticker,'','');
     h+=didLeadHTML(d.lead)+didSecHTML(d.secoes);
   }
   if(d.note)h+='<div class="did-note">⚙️ '+esc(d.note).replace(/^⚙️\s*/,'')+'</div>';
