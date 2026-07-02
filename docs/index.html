@@ -253,8 +253,25 @@ a{color:inherit}
   .day-body{height:auto;max-height:none;overflow:visible}
 }
 
+/* ===== Seletor de edições por CALENDÁRIO (DID + MIR) ===== */
+.ed-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ed-pick{position:relative}
+.ed-cal{position:absolute;top:calc(100% + 6px);left:0;z-index:40;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-md);padding:12px;width:270px}
+.ed-cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ed-cal-hd b{font-size:13px;color:var(--ind0)}
+.ed-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px}
+.ed-dows span{text-align:center;font-size:10px;color:var(--muted);font-weight:700}
+.ed-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.ed-day{border:0;background:transparent;font:inherit;font-size:12px;height:32px;border-radius:8px;color:var(--muted);cursor:default}
+.ed-day.out{opacity:.32}
+.ed-day.has{background:var(--ind-soft);color:var(--ind2);font-weight:700;cursor:pointer}
+.ed-day.has:hover{background:var(--ind2);color:#fff}
+.ed-day.cur{background:var(--ind2);color:#fff}
+.ed-day.today{box-shadow:inset 0 0 0 1.5px var(--gold)}
+.ed-empty{font-size:11.5px;color:var(--muted);text-align:center;padding:8px 0 2px}
+
 /* ===== MIR: barra de ações + card-ponte de saúde no DID ===== */
-.mir-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.mir-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .did-teaser{border-left:5px solid #1a4d4d;margin-top:14px}
 .did-teaser h3{font-family:var(--serif);font-size:16px;color:#1a4d4d;display:flex;gap:7px;align-items:center;margin-bottom:4px}
 .did-teaser .btn{margin-top:10px;background:#1a4d4d}
@@ -262,7 +279,7 @@ a{color:inherit}
 
 /* ===== IMPRESSÃO (Exportar PDF do MIR): isola o #view, esconde a casca ===== */
 @media print{
-  .sidebar,.nav-ov,.topbar,#hubSync,.toast,.overlay,.no-print,.mir-bar,.did-bar{display:none!important}
+  .sidebar,.nav-ov,.topbar,#hubSync,.toast,.overlay,.no-print,.mir-bar,.did-bar,.ed-bar{display:none!important}
   .app{display:block}
   .main{margin:0!important}
   .content{padding:0!important;max-width:none}
@@ -324,6 +341,8 @@ a{color:inherit}
     getWeather:function(){if(canNet())return getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);return cget('weather',null);}).catch(function(){return cget('weather',null);});return Promise.resolve(cget('weather',null));},
     listDIDs:function(){if(canNet())return getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);return cget('dids',[]);}).catch(function(){return cget('dids',[]);});return Promise.resolve(cget('dids',[]));},
     getDIDByName:function(name){if(canNet())return getJSON('didByName','&name='+encodeURIComponent(name)).catch(function(){return null;});return Promise.resolve(null);},
+    listMIRs:function(){if(canNet())return getJSON('mirs').then(function(d){if(Array.isArray(d))cset('mirs',d);return cget('mirs',[]);}).catch(function(){return cget('mirs',[]);});return Promise.resolve(cget('mirs',[]));},
+    getMIRByName:function(name){if(canNet())return getJSON('mirByName','&name='+encodeURIComponent(name)).catch(function(){return null;});return Promise.resolve(null);},
     pullAgenda:function(){if(canNet())return getJSON('pull').then(function(r){if(r&&r.events){var b=cget('bootstrap',EMPTY);b.events=r.events;cset('bootstrap',b);}return r||{events:[],applied:0};}).catch(function(){return {events:cget('bootstrap',EMPTY).events||[],applied:0};});return Promise.resolve({events:cget('bootstrap',EMPTY).events||[],applied:0});},
     saveAllEvents:function(a){var b=cget('bootstrap',EMPTY);b.events=a;cset('bootstrap',b);queue('saveEvents',a);flush();return true;},
     saveAllConfig:function(a){var b=cget('bootstrap',EMPTY);b.config=a;cset('bootstrap',b);queue('saveConfig',a);flush();return true;},
@@ -334,7 +353,7 @@ a{color:inherit}
   function mk(){var ok=null,er=null;var a={withSuccessHandler:function(f){ok=f;return a;},withFailureHandler:function(f){er=f;return a;}};Object.keys(RUN).forEach(function(n){a[n]=function(){var ar=arguments;Promise.resolve().then(function(){return RUN[n].apply(null,ar);}).then(function(r){if(ok)ok(r);},function(e){if(er)er(e);});return a;};});return a;}
   window.google={script:{get run(){return mk();}}};
   function setup(){var g=document.getElementById('hubSetup');if(!g)return;var ai=document.getElementById('hs_api');if(ai)ai.value=API;g.style.display=(TOKEN?'none':'flex');var go=document.getElementById('hs_go');if(go)go.onclick=function(){var ap=(document.getElementById('hs_api').value||'').trim(),tk=(document.getElementById('hs_tok').value||'').trim();if(!tk){document.getElementById('hs_err').textContent='Cole o token.';return;}API=ap;TOKEN=tk;try{localStorage.setItem('hub_api',ap);localStorage.setItem('hub_token',tk);}catch(e){}g.style.display='none';if(window.load)window.load();flush();};}
-  function warm(){if(!canNet())return;getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);}).catch(function(){});getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);}).catch(function(){});getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);}).catch(function(){});getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);}).catch(function(){});getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));}).catch(function(){});}
+  function warm(){if(!canNet())return;getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);}).catch(function(){});getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);}).catch(function(){});getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);}).catch(function(){});getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);}).catch(function(){});getJSON('mirs').then(function(d){if(Array.isArray(d))cset('mirs',d);}).catch(function(){});getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));}).catch(function(){});}
   function boot(){badge();setup();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});flush().then(warm);}
   if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
   window.__hubReset=function(){['hub_token','hub_api'].forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});location.reload();};
@@ -664,8 +683,17 @@ function saveCfgItem(id,cat,pai){
 function delCfg(id){var c=cfgById(id);if(c&&c.gov==='sistema'){toast('Item do sistema');return;}CFG=CFG.filter(function(x){return x.id!==id&&x.pai!==id;});saveCfg();toast('Removido');renderSys();}
 
 /* ============================ DID ============================ */
-var didLoaded=false, didList=[], didCur='', didTab=(function(){try{return localStorage.getItem('hub_did_tab')||'saude';}catch(e){return 'saude';}})();
+var didLoaded=false, didTab=(function(){try{return localStorage.getItem('hub_did_tab')||'saude';}catch(e){return 'saude';}})();
 function didSetTab(id){didTab=id;try{localStorage.setItem('hub_did_tab',id);}catch(e){}renderDID();}
+/* ---- seletor de edições por CALENDÁRIO (DID e MIR) — só datas com edição são clicáveis ---- */
+var edDates={did:[],mir:[]}, edCur={did:'',mir:''}, calMonth={did:null,mir:null}, calOpen={did:false,mir:false};
+function edMonthOf(kind){if(calMonth[kind])return calMonth[kind];var e=edDates[kind].filter(function(x){return x.name===edCur[kind];})[0];var iso=(e&&e.date)||(edDates[kind][0]&&edDates[kind][0].date)||isoOf(TODAY);var d=parseISO(iso);return new Date(d.getFullYear(),d.getMonth(),1);}
+function edRerender(kind){if(kind==='did')renderDID();else renderMIR();}
+function calToggle(kind){calOpen[kind]=!calOpen[kind];if(!calOpen[kind])calMonth[kind]=null;edRerender(kind);}
+function calNav(kind,delta){var m=edMonthOf(kind);calMonth[kind]=new Date(m.getFullYear(),m.getMonth()+delta,1);edRerender(kind);}
+function pickEdition(kind,iso){var e=edDates[kind].filter(function(x){return x.date===iso;})[0];if(!e)return;calOpen[kind]=false;calMonth[kind]=null;if(kind==='did')loadDIDByName(e.name);else loadMIRByName(e.name);}
+function edCalHTML(kind){var byIso={};edDates[kind].forEach(function(x){byIso[x.date]=x.name;});var m=edMonthOf(kind);var gs=mondayOf(new Date(m.getFullYear(),m.getMonth(),1));var cells='';for(var i=0;i<42;i++){var d=new Date(gs);d.setDate(gs.getDate()+i);var iso=isoOf(d);var inM=d.getMonth()===m.getMonth();var has=!!byIso[iso];var cur=has&&byIso[iso]===edCur[kind];var td=iso===isoOf(TODAY);cells+='<button class="ed-day'+(inM?'':' out')+(has?' has':'')+(cur?' cur':'')+(td?' today':'')+'"'+(has?' onclick="pickEdition(\''+kind+'\',\''+iso+'\')"':' disabled')+'>'+d.getDate()+'</button>';}return '<div class="ed-cal" onclick="event.stopPropagation()"><div class="ed-cal-hd"><button class="icbtn" onclick="calNav(\''+kind+'\',-1)">◀</button><b>'+MONFULL[m.getMonth()]+' '+m.getFullYear()+'</b><button class="icbtn" onclick="calNav(\''+kind+'\',1)">▶</button></div><div class="ed-dows"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div><div class="ed-grid">'+cells+'</div>'+(edDates[kind].length?'':'<div class="ed-empty">Sem edições anteriores</div>')+'</div>';}
+function edPickHTML(kind){var e=edDates[kind].filter(function(x){return x.name===edCur[kind];})[0];var cd=(e&&e.date)||(edDates[kind][0]&&edDates[kind][0].date)||'';var lbl=cd?cd.split('-').reverse().join('/'):'edições';return '<div class="ed-pick"><button class="btn btn-sm" onclick="calToggle(\''+kind+'\')">📅 '+lbl+' ▾</button>'+(calOpen[kind]?edCalHTML(kind):'')+'</div>';}
 function didFontesHTML(o){var fontes=(o.fontes&&o.fontes.length)?o.fontes:(o.fonte?[{nome:o.fonte,url:o.url||'#'}]:[]);return fontes.length?'<div class="src">Fonte: '+fontes.map(function(f){return '<a href="'+(f.url||'#')+'" target="_blank" rel="noopener">'+esc(f.nome)+'</a>';}).join(' · ')+'</div>':'';}
 function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>O que importa hoje para suas frentes</h2><ul>'+lead.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>':'';}
 function didSecHTML(secoes){return '<div class="didgrid">'+(secoes||[]).map(function(s){return '<div class="card sec '+(s.id||'')+'"><h3>'+s.nome+'</h3><div class="feeds">'+(s.feeds||'')+'</div>'+((s.tickers&&s.tickers.length)?didTickerHTML(s.tickers,'tk-mini',''):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}).join('')+'</div>';}
@@ -675,11 +703,10 @@ function didTickerHTML(arr,cls,lab){if(!arr||!arr.length)return '';return '<div 
 function didTeaserHTML(t){if(!t)return '';var items=(t.itens||[]).map(function(it){var f=it.fonte?('<div class="src">Fonte: <a href="'+(it.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(it.fonte.nome||'')+'</a></div>'):'';return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+f+'</div>';}).join('');return '<div class="card did-teaser"><h3>'+esc(t.titulo||'🩺 Saúde hoje → MIR Health')+'</h3>'+items+'<button class="btn btn-primary" onclick="setView(\'mir\')">'+esc(t.cta||'Abrir MIR Health')+' →</button></div>';}
 function renderDID(){
   if(!didLoaded){didLoaded=true;
-    api('listDIDs').then(function(l){didList=l||[];if(didList.length)renderDID();}).catch(function(){});
-    api('getDID').then(function(x){if(x){DID=x;if(didList[0])didCur=didList[0].name;renderDID();}}).catch(function(){});}
+    api('listDIDs').then(function(l){edDates.did=l||[];if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;if(edDates.did.length)renderDID();}).catch(function(){});
+    api('getDID').then(function(x){if(x){DID=x;if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;renderDID();}}).catch(function(){});}
   var d=DID, dl=d.dataLabel||d.data||'';
-  var sel=didList.length?'<select class="locsel" style="max-width:170px" onchange="loadDIDByName(this.value)"><option value="">— edição —</option>'+didList.map(function(x){return '<option value="'+x.name+'"'+(x.name===didCur?' selected':'')+'>'+x.date+'</option>';}).join('')+'</select>':'';
-  var h='<div class="did-bar">'+sel+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar DID</button></div>';
+  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button></div>';
   h+='<div class="did-mast"><div class="big">DID</div><div class="tl">'+(d.subtitulo||'Jornal pessoal de inteligência de mercado')+'</div>'+
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
   if(d.abas&&d.abas.length){
@@ -697,11 +724,14 @@ function renderDID(){
   el('view').innerHTML=h;
 }
 function reloadDID(){toast('Atualizando DID…');
-  api('listDIDs').then(function(l){didList=l||[];}).catch(function(){});
-  api('getDID').then(function(x){if(x){DID=x;if(didList[0])didCur=didList[0].name;renderDID();toast('DID atualizado');}else{toast('Nenhum DID novo no Drive');}})
+  api('listDIDs').then(function(l){edDates.did=l||[];if(edDates.did[0])edCur.did=edDates.did[0].name;}).catch(function(){});
+  api('getDID').then(function(x){if(x){DID=x;renderDID();toast('DID atualizado');}else{toast('Nenhum DID novo no Drive');}})
   .catch(function(){toast('Falha ao atualizar DID');});}
-function loadDIDByName(name){if(!name)return;toast('Carregando edição…');didCur=name;
+function loadDIDByName(name){if(!name)return;toast('Carregando edição…');edCur.did=name;
   api('getDIDByName',name).then(function(x){if(x){DID=x;renderDID();toast('Edição carregada');}else toast('Edição não encontrada');})
+  .catch(function(){toast('Falha ao carregar');});}
+function loadMIRByName(name){if(!name)return;toast('Carregando edição…');edCur.mir=name;
+  api('getMIRByName',name).then(function(x){if(x){MIR=x;renderMIR();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
 
 /* ============================ MIR HEALTH (identidade IHB) ============================ */
@@ -777,10 +807,12 @@ function mirBodyHTML(d){
 }
 function renderMIR(){
   if(!document.getElementById('mir-css')){var st=document.createElement('style');st.id='mir-css';st.textContent=MIR_CSS;document.head.appendChild(st);}
-  if(!mirLoaded){mirLoaded=true;api('getMIR').then(function(x){if(x){MIR=x;renderMIR();}}).catch(function(){});}
+  if(!mirLoaded){mirLoaded=true;
+    api('listMIRs').then(function(l){edDates.mir=l||[];if(!edCur.mir&&edDates.mir[0])edCur.mir=edDates.mir[0].name;renderMIR();}).catch(function(){});
+    api('getMIR').then(function(x){if(x){MIR=x;if(!edCur.mir&&edDates.mir[0])edCur.mir=edDates.mir[0].name;renderMIR();}}).catch(function(){});}
   var d=MIR;
   if(!d){el('view').innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:44px">Carregando MIR Health…<br><small>Se não carregar, confira a conexão.</small></div>';return;}
-  var bar='<div class="mir-bar no-print"><button class="btn btn-sm" onclick="reloadMIR()">↻ Atualizar</button><button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ Baixar HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
+  var bar='<div class="mir-bar no-print">'+edPickHTML('mir')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="reloadMIR()">↻</button><button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
   el('view').innerHTML=bar+'<div class="mir">'+mirBodyHTML(d)+'</div>';
 }
 function reloadMIR(){toast('Atualizando MIR…');api('getMIR').then(function(x){if(x){MIR=x;renderMIR();toast('MIR atualizado');}else toast('Nada novo');}).catch(function(){toast('Falha ao atualizar');});}
