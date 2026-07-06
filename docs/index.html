@@ -271,6 +271,41 @@ a{color:inherit}
 .ed-day.today{box-shadow:inset 0 0 0 1.5px var(--gold)}
 .ed-empty{font-size:11.5px;color:var(--muted);text-align:center;padding:8px 0 2px}
 
+/* ===== HOME (Início) ===== */
+.home-hero{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:linear-gradient(120deg,var(--ind1),var(--ind2));color:#fff;border-radius:var(--r-lg);padding:18px 22px;margin-bottom:14px;box-shadow:var(--sh-md)}
+.home-hero .hh-sau{font-family:var(--serif);font-size:24px;font-weight:700}
+.home-hero .hh-date{font-size:13px;opacity:.88;margin-top:2px}
+.home-hero .hh-date::first-letter{text-transform:uppercase}
+.home-hero .hh-wx{text-align:right}
+.home-hero .wx,.home-hero .wx.wx-lg{color:#fff}
+.home-hero .wx small{color:#cfd3ee}
+.hh-loc{font-size:11px;opacity:.72;margin-top:2px}
+.home-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px}
+.hcard h3{font-family:var(--serif);font-size:16px;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.hcard h4{font-size:14.5px;font-weight:700;margin:0 0 5px}
+.hcard p{font-size:13px;color:#333;margin:0 0 7px}
+.hstale{font-size:10px;color:var(--muted);font-weight:400;margin-left:auto}
+.hev-destaque{background:var(--ind-soft);border-left:4px solid var(--ind2);border-radius:8px;padding:9px 12px;cursor:pointer;margin-bottom:8px}
+.hev-destaque .t{font-size:11px;font-weight:700;color:var(--ind2);font-variant-numeric:tabular-nums}
+.hev-destaque .ti{font-weight:700;font-size:14.5px;margin:1px 0 5px}
+.hev-list{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.hev{font-size:12.5px;color:#444}
+.hev .t{font-weight:700;color:var(--ind2);font-variant-numeric:tabular-nums}
+.hfoot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px;margin-top:8px}
+.hfoot b{color:var(--ind2)}
+.hempty{font-size:13px;color:var(--muted);font-style:italic;padding:8px 0}
+.hsp{padding:7px 0;border-top:1px dashed var(--line)}
+.hsp:first-of-type{border-top:0}
+.hsp b{font-size:13px}
+.hline{font-size:12.5px;color:#333;margin-top:2px}
+.hline.muted2{color:var(--muted)}
+.hlbl{display:inline-block;background:var(--ind-soft);color:var(--ind2);font-size:10px;font-weight:800;border-radius:4px;padding:1px 6px;margin-right:5px}
+.seldon-banner{background:var(--ind0);color:#EDEFFA;border-left:5px solid var(--gold);border-radius:var(--r-lg);padding:16px 20px;font-family:var(--serif);font-style:italic;font-size:15.5px;line-height:1.6;margin-bottom:12px;box-shadow:var(--sh)}
+.seldon-banner .sb-a{font-style:normal;font-size:12px;color:var(--goldL);margin-top:6px;font-family:var(--sans);letter-spacing:.04em}
+.bq{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 18px;font-size:13.5px;font-style:italic;color:#333;box-shadow:var(--sh)}
+.bq .bq-a{font-style:normal;color:var(--muted);font-size:12px;margin-left:8px}
+@media (max-width:960px){.home-grid{grid-template-columns:1fr}}
+
 /* ===== Leitura por voz (TTS) — botão ativo ===== */
 .tts-on{background:var(--ind2)!important;color:#fff!important;border-color:var(--ind2)!important}
 .mir-bar .tts-on{background:#1a4d4d!important;border-color:#1a4d4d!important}
@@ -343,6 +378,7 @@ a{color:inherit}
     getBootstrap:function(){return flush().then(function(){if(canNet())return getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));return cget('bootstrap',EMPTY);});return cget('bootstrap',EMPTY);}).catch(function(){return cget('bootstrap',EMPTY);});},
     getDID:function(){if(canNet())return getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);return cget('did',null);}).catch(function(){return cget('did',null);});return Promise.resolve(cget('did',null));},
     getMIR:function(){if(canNet())return getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);return cget('mir',null);}).catch(function(){return cget('mir',null);});return Promise.resolve(cget('mir',null));},
+    getHome:function(){if(canNet())return getJSON('home').then(function(d){if(d&&!d.error)cset('home',d);return cget('home',null);}).catch(function(){return cget('home',null);});return Promise.resolve(cget('home',null));},
     getWeather:function(){if(canNet())return getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);return cget('weather',null);}).catch(function(){return cget('weather',null);});return Promise.resolve(cget('weather',null));},
     listDIDs:function(){if(canNet())return getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);return cget('dids',[]);}).catch(function(){return cget('dids',[]);});return Promise.resolve(cget('dids',[]));},
     getDIDByName:function(name){if(canNet())return getJSON('didByName','&name='+encodeURIComponent(name)).catch(function(){return null;});return Promise.resolve(null);},
@@ -358,7 +394,7 @@ a{color:inherit}
   function mk(){var ok=null,er=null;var a={withSuccessHandler:function(f){ok=f;return a;},withFailureHandler:function(f){er=f;return a;}};Object.keys(RUN).forEach(function(n){a[n]=function(){var ar=arguments;Promise.resolve().then(function(){return RUN[n].apply(null,ar);}).then(function(r){if(ok)ok(r);},function(e){if(er)er(e);});return a;};});return a;}
   window.google={script:{get run(){return mk();}}};
   function setup(){var g=document.getElementById('hubSetup');if(!g)return;var ai=document.getElementById('hs_api');if(ai)ai.value=API;g.style.display=(TOKEN?'none':'flex');var go=document.getElementById('hs_go');if(go)go.onclick=function(){var ap=(document.getElementById('hs_api').value||'').trim(),tk=(document.getElementById('hs_tok').value||'').trim();if(!tk){document.getElementById('hs_err').textContent='Cole o token.';return;}API=ap;TOKEN=tk;try{localStorage.setItem('hub_api',ap);localStorage.setItem('hub_token',tk);}catch(e){}g.style.display='none';if(window.load)window.load();flush();};}
-  function warm(){if(!canNet())return;getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);}).catch(function(){});getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);}).catch(function(){});getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);}).catch(function(){});getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);}).catch(function(){});getJSON('mirs').then(function(d){if(Array.isArray(d))cset('mirs',d);}).catch(function(){});getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));}).catch(function(){});}
+  function warm(){if(!canNet())return;getJSON('did').then(function(d){if(d&&!d.error)cset('did',d);}).catch(function(){});getJSON('mir').then(function(d){if(d&&!d.error)cset('mir',d);}).catch(function(){});getJSON('home').then(function(d){if(d&&!d.error)cset('home',d);}).catch(function(){});getJSON('weather').then(function(d){if(d&&!d.error)cset('weather',d);}).catch(function(){});getJSON('dids').then(function(d){if(Array.isArray(d))cset('dids',d);}).catch(function(){});getJSON('mirs').then(function(d){if(Array.isArray(d))cset('mirs',d);}).catch(function(){});getJSON('bootstrap').then(function(d){if(d&&!d.error)cset('bootstrap',applyPending(d));}).catch(function(){});}
   function boot(){badge();setup();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});flush().then(warm);}
   if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
   window.__hubReset=function(){['hub_token','hub_api'].forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});location.reload();};
@@ -379,7 +415,7 @@ var DID={};
 var CFG=[],EVENTS=[],LOCS={};
 var WX={};        /* previsão por dia: { 'AAAA-MM-DD': {tmax,tmin,icon,desc,pop} } */
 var WXMETA=null;  /* { local, updatedAt } */
-function wxLoad(){ api('getWeather').then(function(w){ WX={}; WXMETA=null; if(w&&w.dias){ (w.dias||[]).forEach(function(d){ if(d&&d.date)WX[d.date]=d; }); WXMETA={local:w.local||'',updatedAt:w.updatedAt||''}; if(page==='agenda')renderAgenda(); } }).catch(function(){}); }
+function wxLoad(){ api('getWeather').then(function(w){ WX={}; WXMETA=null; if(w&&w.dias){ (w.dias||[]).forEach(function(d){ if(d&&d.date)WX[d.date]=d; }); WXMETA={local:w.local||'',updatedAt:w.updatedAt||''}; if(page==='agenda')renderAgenda(); else if(page==='home')renderHome(); } }).catch(function(){}); }
 function wxOf(iso){ return WX[iso]||null; }
 function wxChip(iso){ var w=wxOf(iso); if(!w)return ''; var t=(w.tmax!=null?Math.round(w.tmax)+'°':''); var lo=(w.tmin!=null?'<small>/'+Math.round(w.tmin)+'°</small>':''); var rain=(w.pop!=null&&w.pop>=30?'<span class="wx-pop">💧'+Math.round(w.pop)+'%</span>':''); return '<span class="wx" title="'+esc(w.desc||'')+(w.pop!=null?(' · chuva '+Math.round(w.pop)+'%'):'')+'"><span class="wx-ic">'+(w.icon||'')+'</span>'+t+lo+rain+'</span>'; }
 function wxToday(){ var w=wxOf(isoOf(TODAY)); if(!w)return ''; return '<span class="wx wx-lg" title="'+esc(w.desc||'')+'"><span class="wx-ic">'+(w.icon||'')+'</span> '+(w.tmax!=null?Math.round(w.tmax)+'°':'')+(w.tmin!=null?' / '+Math.round(w.tmin)+'°':'')+(w.desc?' · '+esc(w.desc):'')+'</span>'; }
@@ -423,8 +459,8 @@ var MON=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'
 var MONFULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 /* ============================ SHELL / ROUTER ============================ */
-var NAV=[{k:'agenda',ic:'🗓️',t:'Agenda'},{k:'did',ic:'📰',t:'DID · Mercados'},{k:'mir',ic:'🩺',t:'MIR Health'},{k:'ind',ic:'📊',t:'Indicadores'},{k:'sys',ic:'⚙️',t:'Sistema'}];
-var page=(function(){try{var v=localStorage.getItem('hub_view');return (v&&NAV.some(function(n){return n.k===v;}))?v:'agenda';}catch(e){return 'agenda';}})();
+var NAV=[{k:'home',ic:'🏠',t:'Início'},{k:'agenda',ic:'🗓️',t:'Agenda'},{k:'did',ic:'📰',t:'DID · Mercados'},{k:'mir',ic:'🩺',t:'MIR Health'},{k:'ind',ic:'📊',t:'Indicadores'},{k:'sys',ic:'⚙️',t:'Sistema'}];
+var page='home';   // o app sempre abre na Home (o "bom dia" do dia); a navegação continua persistindo em hub_view p/ usos internos
 var TODAY=(window.__HUB_TODAY?new Date(window.__HUB_TODAY+'T00:00:00'):new Date()); TODAY.setHours(0,0,0,0); // data real (harness pode fixar via __HUB_TODAY)
 /** Recalcula "hoje" (o app pode ficar aberto virando o dia). Retorna true se a data mudou. */
 function refreshToday(){ if(window.__HUB_TODAY)return false; var n=new Date(); n.setHours(0,0,0,0); if(isoOf(n)!==isoOf(TODAY)){TODAY=n; return true;} return false; }
@@ -442,7 +478,7 @@ function setView(k){go(k);}
 function render(){
   refreshToday(); el('todayStr').textContent=pad(TODAY.getDate())+'/'+pad(TODAY.getMonth()+1);
   el('topTitle').textContent=(NAV.find(function(n){return n.k===page;})||{}).t||'Hub';
-  if(page==='agenda')renderAgenda();else if(page==='did')renderDID();else if(page==='mir')renderMIR();else if(page==='ind')renderInd();else renderSys();
+  if(page==='home')renderHome();else if(page==='agenda')renderAgenda();else if(page==='did')renderDID();else if(page==='mir')renderMIR();else if(page==='ind')renderInd();else renderSys();
   window.scrollTo(0,0);
 }
 el('todayStr').textContent=pad(TODAY.getDate())+'/'+pad(TODAY.getMonth()+1);
@@ -763,6 +799,92 @@ function loadDIDByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='did')tts
 function loadMIRByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='mir')ttsStop();toast('Carregando edição…');edCur.mir=name;
   api('getMIRByName',name).then(function(x){if(x){MIR=x;renderMIR();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
+
+/* ============================ HOME (Início) ============================
+ * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
+ * quotes do dia vêm do feed diário home-AAAA-MM-DD.json (rotina das 6h). Sem o feed,
+ * os cards degradam bem e as quotes caem na rotação local (determinística por dia). */
+var HOME=null, homeLoaded=false;
+var SELDON_QUOTES=[
+ 'Para ter sucesso, não basta planejar. É preciso saber improvisar.',
+ 'A queda de um império é uma coisa colossal — e não se combate com lamentos, mas com preparação.',
+ 'A psicohistória não prevê o indivíduo; prevê o movimento das multidões. É no agregado que o futuro se revela.',
+ 'Nunca confunda o improvável com o impossível.',
+ 'Cada crise foi prevista — não para ser evitada, mas para ser atravessada.',
+ 'O conhecimento recolhido hoje é a civilização reconstruída amanhã.',
+ 'As massas se movem por forças que os indivíduos raramente percebem.',
+ 'Um plano de mil anos começa com a decisão de um único dia.',
+ 'Não lamento o Império; lamento os bilhões que não verão o que vem depois dele.',
+ 'A história não é feita de heróis, mas de probabilidades que alguém teve a coragem de calcular.'];
+var BIZ_QUOTES=[
+ {t:'O preço é o que você paga; valor é o que você leva.',a:'Warren Buffett'},
+ {t:'O grande dinheiro não está na compra nem na venda, mas na espera.',a:'Charlie Munger'},
+ {t:'A melhor maneira de prever o futuro é criá-lo.',a:'Peter Drucker'},
+ {t:'Os mercados podem permanecer irracionais por mais tempo do que você pode permanecer solvente.',a:'John Maynard Keynes'},
+ {t:'Não é da benevolência do padeiro que esperamos o nosso pão, mas do seu interesse próprio.',a:'Adam Smith'},
+ {t:'Você tem poder sobre a sua mente, não sobre os eventos. Perceba isso e encontrará a força.',a:'Marco Aurélio'},
+ {t:'Não é que tenhamos pouco tempo; é que perdemos muito dele.',a:'Sêneca'},
+ {t:'A suprema arte da guerra é vencer o inimigo sem lutar.',a:'Sun Tzu'},
+ {t:'O sucesso não é definitivo e o fracasso não é fatal: o que conta é a coragem de continuar.',a:'Winston Churchill'},
+ {t:'Nunca atravesse um rio que tenha, em média, um metro de profundidade.',a:'Nassim Taleb'},
+ {t:'O primeiro princípio é não enganar a si mesmo — e você é a pessoa mais fácil de enganar.',a:'Richard Feynman'},
+ {t:'Nada na vida é tão importante quanto você pensa que é, enquanto está pensando nele.',a:'Daniel Kahneman'},
+ {t:'A concorrência é para perdedores.',a:'Peter Thiel'},
+ {t:'A sua margem é a minha oportunidade.',a:'Jeff Bezos'},
+ {t:'Dor mais reflexão é igual a progresso.',a:'Ray Dalio'}];
+function dayOfYear(){var s=new Date(TODAY.getFullYear(),0,1);return Math.floor((TODAY-s)/86400000);}
+/** Destaque da agenda de hoje: ★ no título > primeira Reunião > próximo evento a partir de agora. */
+function homeAgenda(){var iso=isoOf(TODAY),evs=eventsOf(iso);if(!evs.length)return null;
+  var now=new Date(),nmin=now.getHours()*60+now.getMinutes();
+  var star=evs.filter(function(e){return /★|⭐/.test(e.titulo||'');})[0];
+  var meet=evs.filter(function(e){return e.subtipo==='Reunião';})[0];
+  var next=evs.filter(function(e){return toMin(e.start)>=nmin;})[0];
+  var wh=0;evs.forEach(function(e){if(isWork(e))wh+=durH(e);});
+  return {evs:evs,destaque:star||meet||next||evs[0],wh:wh};}
+function renderHome(){
+  if(!homeLoaded){homeLoaded=true;api('getHome').then(function(x){if(x){HOME=x;if(page==='home')renderHome();}}).catch(function(){});}
+  var hr=new Date().getHours(),sau=hr<12?'Bom dia':(hr<18?'Boa tarde':'Boa noite');
+  var w=wxOf(isoOf(TODAY));
+  var h='<div class="home-hero"><div><div class="hh-sau">'+sau+' 👋</div><div class="hh-date">'+dateFull(TODAY)+'</div></div><div class="hh-wx">'+(w?wxToday():'<span style="opacity:.7;font-size:12px">sem previsão ainda</span>')+(WXMETA&&WXMETA.local?'<div class="hh-loc">'+esc(WXMETA.local)+'</div>':'')+'</div></div>';
+  var stale=(HOME&&HOME.data&&HOME.data!==isoOf(TODAY))?'<span class="hstale">edição de '+HOME.data.split('-').reverse().slice(0,2).join('/')+'</span>':'';
+  h+='<div class="home-grid">';
+  /* Agenda de hoje */
+  var ag=homeAgenda();
+  h+='<div class="card hcard"><h3>🗓️ Hoje na agenda</h3>';
+  if(ag){var d0=ag.destaque;
+    h+='<div class="hev-destaque" onclick="go(\'agenda\')"><div class="t">'+esc(d0.start)+'–'+esc(d0.end)+'</div><div class="ti">'+esc(d0.titulo)+'</div><div>'+(d0.projeto?'<span class="chip" style="background:#EEF0FA;color:#3D43A2">'+esc(d0.projeto)+'</span> ':'')+(d0.subtipo?'<span class="chip" style="background:#EEF0FA;color:#5a5f86">'+esc(d0.subtipo)+'</span>':'')+'</div></div>';
+    var rest=ag.evs.filter(function(e){return e!==d0;}).slice(0,3);
+    if(rest.length)h+='<div class="hev-list">'+rest.map(function(e){return '<div class="hev"><span class="t">'+esc(e.start)+'</span> '+esc(e.titulo)+'</div>';}).join('')+'</div>';
+    h+='<div class="hfoot">'+ag.evs.length+' evento'+(ag.evs.length>1?'s':'')+(ag.wh?' · <b>'+fmtH(ag.wh)+'h</b> de trabalho':'')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
+  }else h+='<div class="hempty">Sem compromissos hoje 🎉</div><div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
+  h+='</div>';
+  /* Mercado */
+  h+='<div class="card hcard"><h3>📈 Mercado'+(stale?' '+stale:'')+'</h3>';
+  if(HOME&&HOME.mercado){var mk=HOME.mercado;h+='<h4>'+esc(mk.titulo||'')+'</h4><p>'+esc(mk.resumo||'')+'</p>'+(mk.fonte?'<div class="src">Fonte: <a href="'+(mk.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(mk.fonte.nome||'')+'</a></div>':'');}
+  else h+='<div class="hempty">A edição do dia chega com a rotina das 6h.</div>';
+  h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'did\')">Ler o DID →</button></div></div>';
+  /* Esportes */
+  h+='<div class="card hcard"><h3>🏟️ Esportes'+(stale?' '+stale:'')+'</h3>';
+  if(HOME&&HOME.esportes){var sp=HOME.esportes;
+    if(sp.yankees){h+='<div class="hsp"><b>⚾ Yankees</b>'+(sp.yankees.ultimo?'<div class="hline">'+esc(sp.yankees.ultimo)+'</div>':'')+(sp.yankees.proximo?'<div class="hline muted2">Próximo: '+esc(sp.yankees.proximo)+'</div>':'')+'</div>';}
+    if(sp.patriots)h+='<div class="hsp"><b>🏈 Patriots</b><div class="hline">'+esc(sp.patriots)+'</div></div>';
+    if(sp.tenis){var tn=sp.tenis;h+='<div class="hsp"><b>🎾 '+esc(tn.evento||'Tênis')+'</b>'+((tn.atp&&tn.atp.length)?'<div class="hline"><span class="hlbl">ATP</span>'+tn.atp.map(esc).join(' · ')+'</div>':'')+((tn.wta&&tn.wta.length)?'<div class="hline"><span class="hlbl">WTA</span>'+tn.wta.map(esc).join(' · ')+'</div>':'')+'</div>';}
+    if(sp.destaque)h+='<div class="hsp"><b>🌍 '+esc(sp.destaque.titulo||'')+'</b><div class="hline">'+esc(sp.destaque.resumo||'')+'</div></div>';
+  }else h+='<div class="hempty">Placar do dia chega com a rotina das 6h.</div>';
+  h+='</div>';
+  /* Radar */
+  h+='<div class="card hcard"><h3>🔭 Radar'+(stale?' '+stale:'')+'</h3>';
+  if(HOME&&HOME.extra){h+='<h4>'+esc(HOME.extra.titulo||'')+'</h4><p>'+esc(HOME.extra.resumo||'')+'</p>'+(HOME.extra.fonte?'<div class="src">Fonte: <a href="'+(HOME.extra.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(HOME.extra.fonte.nome||'')+'</a></div>':'');}
+  else h+='<div class="hempty">—</div>';
+  h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'mir\')">Abrir MIR Health →</button></div></div>';
+  h+='</div>';
+  /* Quotes */
+  var sq=(HOME&&HOME.seldon)||SELDON_QUOTES[dayOfYear()%SELDON_QUOTES.length];
+  h+='<div class="seldon-banner">“'+esc(sq)+'”<div class="sb-a">— Hari Seldon</div></div>';
+  var bq=(HOME&&HOME.quote&&HOME.quote.texto)?{t:HOME.quote.texto,a:HOME.quote.autor||''}:BIZ_QUOTES[dayOfYear()%BIZ_QUOTES.length];
+  h+='<div class="bq">“'+esc(bq.t)+'”<span class="bq-a">— '+esc(bq.a)+'</span></div>';
+  el('view').innerHTML=h;
+}
 
 /* ============================ LEITURA POR VOZ (TTS) — DID e MIR ============================
  * Web Speech API (speechSynthesis): voz do sistema, local (funciona offline), sem custo/API.
