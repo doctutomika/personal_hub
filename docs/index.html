@@ -271,6 +271,10 @@ a{color:inherit}
 .ed-day.today{box-shadow:inset 0 0 0 1.5px var(--gold)}
 .ed-empty{font-size:11.5px;color:var(--muted);text-align:center;padding:8px 0 2px}
 
+/* ===== Leitura por voz (TTS) — botão ativo ===== */
+.tts-on{background:var(--ind2)!important;color:#fff!important;border-color:var(--ind2)!important}
+.mir-bar .tts-on{background:#1a4d4d!important;border-color:#1a4d4d!important}
+
 /* ===== MIR: barra de ações + card-ponte de saúde no DID ===== */
 .mir-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .did-teaser{border-left:5px solid #1a4d4d;margin-top:14px}
@@ -721,7 +725,7 @@ function pickEdition(kind,iso){var e=edDates[kind].filter(function(x){return x.d
 function edCalHTML(kind){var byIso={};edDates[kind].forEach(function(x){byIso[x.date]=x.name;});var m=edMonthOf(kind);var gs=mondayOf(new Date(m.getFullYear(),m.getMonth(),1));var cells='';for(var i=0;i<42;i++){var d=new Date(gs);d.setDate(gs.getDate()+i);var iso=isoOf(d);var inM=d.getMonth()===m.getMonth();var has=!!byIso[iso];var cur=has&&byIso[iso]===edCur[kind];var td=iso===isoOf(TODAY);cells+='<button class="ed-day'+(inM?'':' out')+(has?' has':'')+(cur?' cur':'')+(td?' today':'')+'"'+(has?' onclick="pickEdition(\''+kind+'\',\''+iso+'\')"':' disabled')+'>'+d.getDate()+'</button>';}return '<div class="ed-cal" onclick="event.stopPropagation()"><div class="ed-cal-hd"><button class="icbtn" onclick="calNav(\''+kind+'\',-1)">◀</button><b>'+MONFULL[m.getMonth()]+' '+m.getFullYear()+'</b><button class="icbtn" onclick="calNav(\''+kind+'\',1)">▶</button></div><div class="ed-dows"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div><div class="ed-grid">'+cells+'</div>'+(edDates[kind].length?'':'<div class="ed-empty">Sem edições anteriores</div>')+'</div>';}
 function edPickHTML(kind){var e=edDates[kind].filter(function(x){return x.name===edCur[kind];})[0];var cd=(e&&e.date)||(edDates[kind][0]&&edDates[kind][0].date)||'';var lbl=cd?cd.split('-').reverse().join('/'):'edições';return '<div class="ed-pick"><button class="btn btn-sm" onclick="calToggle(\''+kind+'\')">📅 '+lbl+' ▾</button>'+(calOpen[kind]?edCalHTML(kind):'')+'</div>';}
 function didFontesHTML(o){var fontes=(o.fontes&&o.fontes.length)?o.fontes:(o.fonte?[{nome:o.fonte,url:o.url||'#'}]:[]);return fontes.length?'<div class="src">Fonte: '+fontes.map(function(f){return '<a href="'+(f.url||'#')+'" target="_blank" rel="noopener">'+esc(f.nome)+'</a>';}).join(' · ')+'</div>':'';}
-function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>O que importa hoje para suas frentes</h2><ul>'+lead.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>':'';}
+function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>Sumário Executivo</h2><ul>'+lead.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>':'';}
 function didSecHTML(secoes){return '<div class="didgrid">'+(secoes||[]).map(function(s){return '<div class="card sec '+(s.id||'')+'"><h3>'+s.nome+'</h3><div class="feeds">'+(s.feeds||'')+'</div>'+((s.tickers&&s.tickers.length)?didTickerHTML(s.tickers,'tk-mini',''):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}).join('')+'</div>';}
 function didLeituraHTML(L){if(!L)return '';return '<div class="leitura"><div class="leitura-tag">'+esc(L.rotulo||'📚 Leitura do dia')+(L.assunto?' · <span>'+esc(L.assunto)+'</span>':'')+'</div><h4>'+esc(L.titulo||'')+'</h4><p>'+esc(L.resumo||'')+'</p>'+(L.porque?'<div class="why"><b>Por que importa:</b> '+esc(L.porque)+'</div>':'')+didFontesHTML(L)+'</div>';}
 function didTickerHTML(arr,cls,lab){if(!arr||!arr.length)return '';return '<div class="ticker'+(cls?' '+cls:'')+'">'+(lab?'<div class="tk tk-lab">'+esc(lab)+'</div>':'')+arr.map(function(t){return '<div class="tk"><span class="s">'+esc(t.s)+'</span><span class="v">'+esc(t.v)+(t.d?' <span class="'+t.d+'">'+(t.d==='up'?'▲':'▼')+'</span>':'')+'</span></div>';}).join('')+'</div>';}
@@ -732,7 +736,7 @@ function renderDID(){
     api('listDIDs').then(function(l){edDates.did=l||[];if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;if(edDates.did.length)renderDID();}).catch(function(){});
     api('getDID').then(function(x){if(x){DID=x;if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;renderDID();}}).catch(function(){});}
   var d=DID, dl=d.dataLabel||d.data||'';
-  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button><span style="flex:1"></span><button class="btn btn-sm" onclick="didDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="didPrint()">🖨️ Exportar PDF</button></div>';
+  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button>'+ttsBtnsHTML('did')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="didDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="didPrint()">🖨️ Exportar PDF</button></div>';
   h+='<div class="did-mast"><div class="big">DID</div><div class="tl">'+(d.subtitulo||'Jornal pessoal de inteligência de mercado')+'</div>'+
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
   if(d.abas&&d.abas.length){
@@ -753,12 +757,69 @@ function reloadDID(){toast('Atualizando DID…');
   api('listDIDs').then(function(l){edDates.did=l||[];if(edDates.did[0])edCur.did=edDates.did[0].name;}).catch(function(){});
   api('getDID').then(function(x){if(x){DID=x;renderDID();toast('DID atualizado');}else{toast('Nenhum DID novo no Drive');}})
   .catch(function(){toast('Falha ao atualizar DID');});}
-function loadDIDByName(name){if(!name)return;toast('Carregando edição…');edCur.did=name;
+function loadDIDByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='did')ttsStop();toast('Carregando edição…');edCur.did=name;
   api('getDIDByName',name).then(function(x){if(x){DID=x;renderDID();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
-function loadMIRByName(name){if(!name)return;toast('Carregando edição…');edCur.mir=name;
+function loadMIRByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='mir')ttsStop();toast('Carregando edição…');edCur.mir=name;
   api('getMIRByName',name).then(function(x){if(x){MIR=x;renderMIR();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
+
+/* ============================ LEITURA POR VOZ (TTS) — DID e MIR ============================
+ * Web Speech API (speechSynthesis): voz do sistema, local (funciona offline), sem custo/API.
+ * Lê o conteúdo editorial (lead, itens, "por que importa"); PULA tickers (números soam mal).
+ * iOS: começa por toque (o botão) e pausa com a tela bloqueada — melhor com o app aberto. */
+var TTS={gen:0,chunks:[],i:0,playing:false,paused:false,ctx:'',voice:null,rate:(function(){try{var r=parseFloat(localStorage.getItem('hub_tts_rate')||'1');return [1,1.25,1.5].indexOf(r)>=0?r:1;}catch(e){return 1;}})()};
+function ttsSupported(){return !!(window.speechSynthesis&&window.SpeechSynthesisUtterance);}
+function ttsVoice(){if(TTS.voice)return TTS.voice;var vs=ttsSupported()?speechSynthesis.getVoices():[];TTS.voice=vs.filter(function(v){return v.lang==='pt-BR'||v.lang==='pt_BR';})[0]||vs.filter(function(v){return /^pt/i.test(v.lang);})[0]||null;return TTS.voice;}
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=function(){TTS.voice=null;};
+function ttsStripHtml(s){var d=document.createElement('div');d.innerHTML=String(s==null?'':s);return (d.textContent||'').replace(/\*+/g,'').replace(/\s+/g,' ').trim();}
+function ttsName(s){return String(s||'').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{20BF}]/gu,'').replace(/&/g,' e ').replace(/·/g,' ').replace(/\s+/g,' ').trim();}
+function ttsSentences(t){var parts=String(t).split(/([.!?…;]+\s+)/),out=[],cur='';for(var i=0;i<parts.length;i++){cur+=parts[i];if(i%2===1){out.push(cur);cur='';}}if(cur)out.push(cur);return out;}
+function ttsSplit(t){t=String(t||'').trim();if(!t)return [];if(t.length<=240)return [t];var out=[],cur='';ttsSentences(t).forEach(function(p){if((cur+p).length>240){if(cur.trim())out.push(cur.trim());cur=p;}else cur+=p;});if(cur.trim())out.push(cur.trim());return out;}
+function ttsPush(a,s){ttsSplit(ttsStripHtml(s)).forEach(function(x){a.push(x);});}
+/** Roteiro de narração do DID: sumário → seções (título/resumo/porquê) → teaser de saúde. */
+function didSpeechChunks(d){if(!d)return [];var a=[],dl=d.data||d.dataLabel||'';
+  a.push('DID. '+((d.subtitulo&&!/pessoal/i.test(d.subtitulo))?d.subtitulo:'Inteligência diária de mercados')+'.'+(dl?(' Edição de '+dl+'.'):''));
+  var aba=(d.abas&&d.abas.length)?(d.abas.filter(function(x){return x.id==='mercados';})[0]||d.abas[0]):null;
+  var lead=aba?aba.lead:d.lead, secoes=aba?aba.secoes:d.secoes;
+  if(lead&&lead.length){a.push('Sumário executivo.');lead.forEach(function(x){ttsPush(a,x);});}
+  (secoes||[]).forEach(function(s){if(/saude/i.test(s.id||''))return;a.push('Seção: '+ttsName(s.nome)+'.');(s.itens||[]).forEach(function(it){ttsPush(a,it.titulo+'.');ttsPush(a,it.resumo);if(it.porque)ttsPush(a,'Por que importa: '+it.porque);});});
+  if(d.saude_teaser){a.push('Saúde hoje.');(d.saude_teaser.itens||[]).forEach(function(it){ttsPush(a,it.titulo+'. '+(it.resumo||''));});a.push('Análise completa no MIR Health.');}
+  a.push('Fim da edição.');return a;}
+/** Roteiro de narração do MIR: panorama → sentimento → top movers (nomes) → blocos → leitura → monitorar. */
+function mirSpeechChunks(d){if(!d)return [];var a=[],dl=d.data||d.dataLabel||'';
+  a.push('MIR Health. Market Insight Report on Health.'+(dl?(' Edição de '+dl+'.'):''));
+  if(d.resumo_executivo&&d.resumo_executivo.length){a.push('Panorama executivo.');d.resumo_executivo.forEach(function(x){ttsPush(a,x);});}
+  if(d.sentimento&&d.sentimento.length){a.push('Sentimento por setor.');d.sentimento.forEach(function(s){var n=s.nota==='+'?'positivo':(s.nota==='-'?'negativo':'neutro');ttsPush(a,s.setor+': '+(s.nota_txt||n)+'. '+(s.porque||''));});}
+  if(d.top_movers){var up=(d.top_movers.up||[]).map(function(t){return t.n||t.s;}),dn=(d.top_movers.down||[]).map(function(t){return t.n||t.s;});if(up.length)a.push('Maiores altas: '+up.join(', ')+'.');if(dn.length)a.push('Maiores baixas: '+dn.join(', ')+'.');}
+  (d.abas||[]).forEach(function(ab){a.push('Seção: '+ttsName(ab.nome)+'.');(ab.itens||[]).forEach(function(it){ttsPush(a,it.titulo+'.');ttsPush(a,it.resumo);if(it.porque)ttsPush(a,'Por que importa: '+it.porque);});});
+  (d.leitura||[]).forEach(function(L){a.push('Ciência e leitura.');ttsPush(a,L.titulo+'.');ttsPush(a,L.resumo);if(L.porque)ttsPush(a,'Por que importa: '+L.porque);});
+  if(d.monitorar&&d.monitorar.length){a.push('O que monitorar.');d.monitorar.forEach(function(x){ttsPush(a,x);});}
+  a.push('Fim da edição.');return a;}
+function ttsNext(){if(!TTS.playing)return;if(TTS.i>=TTS.chunks.length){ttsStopHard();ttsUi();return;}
+  var g=TTS.gen,u=new SpeechSynthesisUtterance(TTS.chunks[TTS.i]);u.lang='pt-BR';var v=ttsVoice();if(v)u.voice=v;u.rate=TTS.rate;
+  u.onend=function(){if(g!==TTS.gen||!TTS.playing)return;TTS.i++;ttsNext();};
+  u.onerror=function(){if(g!==TTS.gen||!TTS.playing)return;TTS.i++;ttsNext();};
+  try{speechSynthesis.speak(u);}catch(e){}}
+function ttsPlay(chunks,ctx){ttsStopHard();TTS.gen++;TTS.chunks=chunks;TTS.i=0;TTS.ctx=ctx;TTS.playing=true;TTS.paused=false;ttsNext();ttsUi();}
+function ttsStopHard(){TTS.gen++;TTS.playing=false;TTS.paused=false;TTS.chunks=[];TTS.i=0;TTS.ctx='';try{speechSynthesis.cancel();}catch(e){}}
+function ttsStop(){ttsStopHard();ttsUi();}
+function ttsToggle(kind){if(!ttsSupported()){toast('Leitura por voz não suportada neste navegador');return;}
+  if(TTS.playing&&TTS.ctx===kind){if(TTS.paused){try{speechSynthesis.resume();}catch(e){}TTS.paused=false;}else{try{speechSynthesis.pause();}catch(e){}TTS.paused=true;}ttsUi();return;}
+  var chunks=kind==='mir'?mirSpeechChunks(MIR):didSpeechChunks(DID);
+  if(!chunks.length){toast('Nada para ler ainda');return;}
+  ttsPlay(chunks,kind);}
+function ttsRate(){var seq=[1,1.25,1.5],i=seq.indexOf(TTS.rate);TTS.rate=seq[(i+1)%seq.length];try{localStorage.setItem('hub_tts_rate',String(TTS.rate));}catch(e){}
+  if(TTS.playing&&!TTS.paused){TTS.gen++;try{speechSynthesis.cancel();}catch(e){}var g2=TTS.gen;setTimeout(function(){if(g2===TTS.gen&&TTS.playing)ttsNext();},80);}
+  ttsUi();}
+function ttsBtnsHTML(kind){if(!ttsSupported())return '';var active=TTS.playing&&TTS.ctx===kind;
+  return '<button class="btn btn-sm'+(active?' tts-on':'')+'" id="ttsBtn" data-ctx="'+kind+'" onclick="ttsToggle(\''+kind+'\')" title="Ler a edição em voz alta">'+(active?(TTS.paused?'▶ Continuar':'⏸ Pausar'):'🔊 Ouvir')+'</button>'+
+    '<button class="btn btn-sm" id="ttsStopBtn" onclick="ttsStop()" title="Parar" style="'+(active?'':'display:none')+'">⏹</button>'+
+    '<button class="btn btn-sm" id="ttsRateBtn" onclick="ttsRate()" title="Velocidade da leitura">'+String(TTS.rate).replace('.',',')+'×</button>';}
+function ttsUi(){var b=el('ttsBtn');if(!b)return;var kind=b.getAttribute('data-ctx'),active=TTS.playing&&TTS.ctx===kind;
+  b.textContent=active?(TTS.paused?'▶ Continuar':'⏸ Pausar'):'🔊 Ouvir';b.classList.toggle('tts-on',!!active);
+  var s=el('ttsStopBtn');if(s)s.style.display=active?'':'none';
+  var r=el('ttsRateBtn');if(r)r.textContent=String(TTS.rate).replace('.',',')+'×';}
 
 /* ============================ DID — EXPORT HTML + PDF (identidade índigo/teal, produto vendável) ============================
  * Layout standalone (self-contained) para "Baixar HTML" e para o "Exportar PDF" (via window.print, trocando o #view
@@ -813,7 +874,7 @@ function didExportBodyHTML(d){
   var h='<header><div class="hd-in"><div class="brand">DID<small>'+esc(sub)+'</small></div><div class="hd-meta"><b>'+esc(dl)+'</b><br>'+esc(d.local||'São Paulo')+' · Edição diária</div></div></header>';
   h+=didTkStripHTML(d.ticker);
   h+='<div class="wrap">';
-  if(lead&&lead.length)h+='<h2 class="sec">O que importa hoje</h2><div class="lead"><ul>'+lead.map(function(x){return '<li>'+stripPj(x)+'</li>';}).join('')+'</ul></div>';
+  if(lead&&lead.length)h+='<h2 class="sec">Sumário Executivo</h2><div class="lead"><ul>'+lead.map(function(x){return '<li>'+stripPj(x)+'</li>';}).join('')+'</ul></div>';
   (secoes||[]).forEach(function(s){
     if(/saude/i.test(s.id||''))return;   // saúde não entra como seção — vai só como teaser-ponte
     h+='<h2 class="sec">'+esc(s.nome)+'</h2><div class="blk '+(s.id||'')+'">'+((s.tickers&&s.tickers.length)?didTkStripHTML(s.tickers,'sec-tk'):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';
@@ -906,7 +967,7 @@ function renderMIR(){
     api('getMIR').then(function(x){if(x){MIR=x;if(!edCur.mir&&edDates.mir[0])edCur.mir=edDates.mir[0].name;renderMIR();}}).catch(function(){});}
   var d=MIR;
   if(!d){el('view').innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:44px">Carregando MIR Health…<br><small>Se não carregar, confira a conexão.</small></div>';return;}
-  var bar='<div class="mir-bar no-print">'+edPickHTML('mir')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="reloadMIR()">↻</button><button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
+  var bar='<div class="mir-bar no-print">'+edPickHTML('mir')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="reloadMIR()">↻</button>'+ttsBtnsHTML('mir')+'<button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
   el('view').innerHTML=bar+'<div class="mir">'+mirBodyHTML(d)+'</div>';
 }
 function reloadMIR(){toast('Atualizando MIR…');api('getMIR').then(function(x){if(x){MIR=x;renderMIR();toast('MIR atualizado');}else toast('Nada novo');}).catch(function(){toast('Falha ao atualizar');});}
