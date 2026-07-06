@@ -574,6 +574,7 @@ function saveEvent(id){
   var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;
   var o={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim()};
   if(!o.titulo){toast('Dê um título');return;}
+  if(!o.date){toast('Escolha a data');return;}   // input de data nativo pode ser limpo → evita evento órfão sem data
   if(id){var e=EVENTS.find(function(x){return x.id===id;});Object.assign(e,o);e.fonte='user';}else{o.id='evt-'+Date.now();o.status='';o.fonte='user';EVENTS.push(o);}
   saveEv();closeModal();toast('Salvo');renderAgenda();
 }
