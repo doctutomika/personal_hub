@@ -386,7 +386,7 @@ function saveEv(){api('saveAllEvents',EVENTS).catch(function(){toast('Falha ao s
 function saveLocs(){var a=Object.keys(LOCS).filter(function(k){return LOCS[k];}).map(function(k){return {date:k,loc:LOCS[k]};});api('saveAllLocations',a).catch(function(){toast('Falha ao salvar local');});}
 function getLoc(iso){return LOCS[iso]||'';}
 function setLoc(iso,v){if(v)LOCS[iso]=v;else delete LOCS[iso];saveLocs();renderAgenda();}
-function locSelect(iso,cur){var ops=byCat('local').map(function(l){return '<option value="'+l.valor+'"'+(l.valor===cur?' selected':'')+'>'+l.valor+'</option>';}).join('');return '<select class="locsel" title="Local de trabalho (gerencie em Sistema)" onclick="event.stopPropagation()" onchange="setLoc(\''+iso+'\',this.value)"><option value="">· local de trabalho</option>'+ops+'</select>';}
+function locSelect(iso,cur){return '<select class="locsel" title="Local (gerencie em Sistema)" onclick="event.stopPropagation()" onchange="setLoc(\''+iso+'\',this.value)"><option value="">· local</option>'+locOptgroups(cur)+'</select>';}
 function load(){var v=document.getElementById('view');if(v)v.innerHTML='<div style="padding:48px;text-align:center;color:#6B7088">Carregando…</div>';api('getBootstrap').then(function(d){CFG=(d&&d.config)||[];EVENTS=(d&&d.events)||[];LOCS=(d&&d.locations)||{};render();wxLoad();}).catch(function(e){var vv=document.getElementById('view');if(vv)vv.innerHTML='<div class="card">Erro ao carregar: '+((e&&e.message)||e)+'</div>';});}
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&refreshToday()&&page==='agenda')renderAgenda(); });
 function reloadAgenda(){toast('Atualizando…');
@@ -539,7 +539,7 @@ function openEvent(id, prefill){
   var tipo=tipoOf(e.subtipo)||'Trabalho';
   var tipoOpts=byCat('tipo').map(function(t){return '<option value="'+t.valor+'"'+(t.valor===tipo?' selected':'')+'>'+t.valor+'</option>';}).join('');
   var projOpts='<option value="">—</option>'+byCat('projeto').map(function(p){return '<option value="'+p.valor+'"'+(p.valor===e.projeto?' selected':'')+'>'+p.valor+'</option>';}).join('');
-  var locOpts='<option value="">—</option>'+byCat('local').map(function(l){return '<option value="'+l.valor+'"'+(l.valor===e.local?' selected':'')+'>'+l.valor+'</option>';}).join('');
+  var locOpts='<option value="">—</option>'+locOptgroups(e.local);
   openModal('<div class="modal-head"><h3>'+(isNew?'Novo evento':'Editar evento')+'</h3><button class="x" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body">'+
     '<div class="field"><label>Título</label><input id="m_ti" value="'+esc(e.titulo)+'" placeholder="Ex.: Reunião QBem"></div>'+
@@ -636,9 +636,26 @@ var sysTab='cat';
 function exportAgenda(){toast('Exportando…');api('exportState').then(function(r){toast(r||'Exportado');}).catch(function(){toast('Falha ao exportar');});}
 function renderSys(){
   var h='<div class="page-head"><h1>Gestão do Sistema</h1><div class="sub">Tabelas de apoio editáveis</div><div class="spacer"></div><button class="btn btn-sm" onclick="exportAgenda()" title="Grava state/current.json no Drive para o cron ler">⬇ Exportar agenda</button></div>';
-  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais de trabalho']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
-  if(sysTab==='cat')h+=sysCats();else h+=sysSimple(sysTab);
+  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
+  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else h+=sysSimple(sysTab);
   el('view').innerHTML=h;
+}
+/** Locais agrupados por contexto (pai = Trabalho | Pessoal; legado sem pai conta como Trabalho). */
+function locsByPai(p){return byCat('local').filter(function(l){return (l.pai||'Trabalho')===p;});}
+function locOptgroups(cur){return ['Trabalho','Pessoal'].map(function(p){var items=locsByPai(p);return items.length?'<optgroup label="'+p+'">'+items.map(function(l){return '<option value="'+esc(l.valor)+'"'+(l.valor===cur?' selected':'')+'>'+esc(l.valor)+'</option>';}).join('')+'</optgroup>':'';}).join('');}
+function sysLocais(){
+  var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Locais por contexto: <b>Trabalho</b> e <b>Pessoal</b>. Aparecem agrupados no seletor de local (dia e evento).</div>';
+  ['Trabalho','Pessoal'].forEach(function(p){
+    var items=locsByPai(p);
+    h+='<div class="grp-h" style="display:flex;align-items:center;gap:8px"><b>'+p+'</b><span style="flex:1"></span><button class="btn btn-sm" onclick="openCfg(\'local\',\''+p+'\')">＋ Local</button></div>';
+    if(!items.length)h+='<div class="muted" style="font-style:italic;padding:2px 0 8px">Nenhum local</div>';
+    items.forEach(function(l){
+      h+='<div class="sub-block"><div class="sub-row"><span class="swatch" style="background:'+l.cor+'"></span><b>'+esc(l.valor)+'</b><span class="muted" style="font-size:11px">ordem '+(l.ordem||'')+'</span><span style="flex:1"></span>'+
+        '<button class="icbtn" title="editar" onclick="openCfg(\'local\',\''+p+'\',\''+l.id+'\')">✎</button>'+
+        '<button class="icbtn" title="excluir" onclick="delCfg(\''+l.id+'\')">×</button></div></div>';
+    });
+  });
+  return h;
 }
 function sysCats(){
   var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Tipo → Subtipo → Neto (ex.: Pessoal → Leitura → Livro/HBR/DID). O neto é opcional no evento.</div>';
@@ -674,6 +691,7 @@ function openCfg(cat,pai,id){
   openModal('<div class="modal-head"><h3>'+(id?'Editar ':'Novo ')+label+'</h3><button class="x" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body">'+
     ((cat==='subtipo'||cat==='subsub')?'<div class="muted" style="font-size:12px">Pai: <b>'+esc(paiName)+'</b></div>':'')+
+    ((cat==='local')?'<div class="field"><label>Categoria</label><select id="c_pai"><option value="Trabalho"'+((c.pai||pai)==='Trabalho'?' selected':'')+'>Trabalho</option><option value="Pessoal"'+((c.pai||pai)==='Pessoal'?' selected':'')+'>Pessoal</option></select></div>':'')+
     '<div class="field"><label>Nome</label><input id="c_val" value="'+esc(c.valor)+'"></div>'+
     '<div class="grid2"><div class="field"><label>Cor</label><input id="c_cor" type="color" value="'+c.cor+'" style="height:40px;padding:3px"></div>'+
     '<div class="field"><label>Ordem</label><input id="c_ord" type="number" value="'+(c.ordem||1)+'"></div></div>'+
@@ -682,7 +700,8 @@ function openCfg(cat,pai,id){
 function saveCfgItem(id,cat,pai){
   var v=el('c_val').value.trim();if(!v){toast('Dê um nome');return;}
   var o={valor:v,cor:el('c_cor').value,ordem:+el('c_ord').value||1};
-  if(id){Object.assign(CFG.find(function(x){return x.id===id;}),o);}else{o.id='cfg-'+Date.now();o.cat=cat;o.pai=pai||'';o.gov='usuario';CFG.push(o);}
+  if(cat==='local'&&el('c_pai'))o.pai=el('c_pai').value;   // local: categoria Trabalho/Pessoal (editável)
+  if(id){Object.assign(CFG.find(function(x){return x.id===id;}),o);}else{o.id='cfg-'+Date.now();o.cat=cat;if(o.pai===undefined)o.pai=pai||'';o.gov='usuario';CFG.push(o);}
   saveCfg();closeModal();toast('Salvo');renderSys();
 }
 function delCfg(id){var c=cfgById(id);if(c&&c.gov==='sistema'){toast('Item do sistema');return;}CFG=CFG.filter(function(x){return x.id!==id&&x.pai!==id;});saveCfg();toast('Removido');renderSys();}
