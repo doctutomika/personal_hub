@@ -240,6 +240,7 @@ a{color:inherit}
 /* ===== RESPONSIVO ===== */
 @media (max-width:1320px){ .weekgrid{grid-template-columns:repeat(4,1fr)} }
 @media (max-width:960px){ .indcols,.didgrid{grid-template-columns:1fr} }
+@media (max-width:560px){ .grid2{grid-template-columns:1fr} .ed-cal{max-width:calc(100vw - 24px)} .mir-bar{justify-content:flex-start} }
 @media (max-width:860px){
   .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .25s;box-shadow:var(--sh-md)}
   body.nav-open .sidebar{transform:translateX(0)}
@@ -531,19 +532,18 @@ function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e
 function openModal(html){el('modal').innerHTML=html;el('overlay').classList.remove('hidden');}
 function closeModal(){el('overlay').classList.add('hidden');}
 el('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
-function openEvent(id){
-  var e=id?EVENTS.find(function(x){return x.id===id;}):null;
-  var isNew=!e;
-  if(isNew){e={id:'',date:isoOf(cur),start:'09:00',end:'10:00',titulo:'',subtipo:'Reunião',subsub:'',projeto:'',local:'',note:''};}
+function openEvent(id, prefill){
+  var e=id?EVENTS.find(function(x){return x.id===id;}):(prefill||null);
+  var isNew=!id;
+  if(!e){e={id:'',date:isoOf(cur),start:'09:00',end:'10:00',titulo:'',subtipo:'Reunião',subsub:'',projeto:'',local:'',note:''};}
   var tipo=tipoOf(e.subtipo)||'Trabalho';
-  var dayOpts=weekDays().map(function(d){var iso=isoOf(d);return '<option value="'+iso+'"'+(iso===e.date?' selected':'')+'>'+DOW[(d.getDay()+6)%7]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'</option>';}).join('');
   var tipoOpts=byCat('tipo').map(function(t){return '<option value="'+t.valor+'"'+(t.valor===tipo?' selected':'')+'>'+t.valor+'</option>';}).join('');
   var projOpts='<option value="">—</option>'+byCat('projeto').map(function(p){return '<option value="'+p.valor+'"'+(p.valor===e.projeto?' selected':'')+'>'+p.valor+'</option>';}).join('');
   var locOpts='<option value="">—</option>'+byCat('local').map(function(l){return '<option value="'+l.valor+'"'+(l.valor===e.local?' selected':'')+'>'+l.valor+'</option>';}).join('');
   openModal('<div class="modal-head"><h3>'+(isNew?'Novo evento':'Editar evento')+'</h3><button class="x" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body">'+
     '<div class="field"><label>Título</label><input id="m_ti" value="'+esc(e.titulo)+'" placeholder="Ex.: Reunião QBem"></div>'+
-    '<div class="grid2"><div class="field"><label>Dia</label><select id="m_date">'+dayOpts+'</select></div>'+
+    '<div class="grid2"><div class="field"><label>Dia</label><input id="m_date" type="date" value="'+esc(e.date)+'"></div>'+
       '<div class="field"><label>Local</label><select id="m_loc">'+locOpts+'</select></div></div>'+
     '<div class="grid2"><div class="field"><label>Início</label><input id="m_start" type="time" step="900" value="'+e.start+'"></div>'+
       '<div class="field"><label>Fim</label><input id="m_end" type="time" step="900" value="'+e.end+'"></div></div>'+
@@ -554,11 +554,16 @@ function openEvent(id){
     '<div class="field"><label>Nota (opcional)</label><textarea id="m_note" rows="2" placeholder="Observação — link: [texto curto](https://… ou file:///…)">'+esc(e.note)+'</textarea><div class="hint">Dica: <code>[Minutas NSP](https://…)</code> mostra só o texto e abre o link.</div></div>'+
     '<div class="muted" id="m_calc" style="font-size:12px"></div>'+
     '</div>'+
-    '<div class="modal-foot"><div>'+(isNew?'':'<button class="btn btn-sm btn-ghost" style="color:var(--miss)" onclick="delEvent(\''+e.id+'\')">Excluir</button>')+'</div>'+
+    '<div class="modal-foot"><div style="display:flex;gap:8px">'+(isNew?'':'<button class="btn btn-sm btn-ghost" onclick="dupEvent()">⧉ Duplicar</button><button class="btn btn-sm btn-ghost" style="color:var(--miss)" onclick="delEvent(\''+e.id+'\')">Excluir</button>')+'</div>'+
     '<div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveEvent(\''+(e.id||'')+'\')">Salvar</button></div></div>');
   fillSub(e.subtipo); fillSubsub(e.subsub);
-  ['m_start','m_end','m_tipo'].forEach(function(idd){el(idd).addEventListener('change',calcDur);});calcDur();
+  el('m_start').addEventListener('change',autoEnd);   // ao mudar o início, fim vai p/ +1h automaticamente
+  ['m_end','m_tipo'].forEach(function(idd){el(idd).addEventListener('change',calcDur);});calcDur();
 }
+/** Ao escolher a hora de início, joga o fim para 1h depois (padrão 1h). */
+function autoEnd(){var a=toMin(el('m_start').value);var b=(a+60)%1440;el('m_end').value=pad(Math.floor(b/60))+':'+pad(b%60);calcDur();}
+/** Duplica o evento aberto: abre um NOVO com os mesmos dados (ajuste a data/hora e salve → vira outro). */
+function dupEvent(){var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;var pf={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim()};openEvent(null,pf);toast('Duplicado — ajuste data/hora e salve');}
 function fillSub(sel){var tipo=el('m_tipo').value;var subs=subtiposOf(tipo);el('m_sub').innerHTML=subs.map(function(s){return '<option value="'+s.valor+'"'+(s.valor===sel?' selected':'')+'>'+s.valor+'</option>';}).join('');}
 function fillSubsub(sel){var tipo=el('m_tipo').value,sub=el('m_sub').value;var nn=subsubOf(tipo,sub);var w=el('m_subsub_wrap');
   if(!nn.length){w.style.display='none';el('m_subsub').innerHTML='';return;}
