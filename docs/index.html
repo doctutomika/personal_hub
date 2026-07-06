@@ -532,6 +532,7 @@ function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e
 function openModal(html){el('modal').innerHTML=html;el('overlay').classList.remove('hidden');}
 function closeModal(){el('overlay').classList.add('hidden');}
 el('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+window.addEventListener('afterprint',function(){if(page==='did')renderDID();});   // didPrint troca o #view pelo layout de export → restaura depois
 function openEvent(id, prefill){
   var e=id?EVENTS.find(function(x){return x.id===id;}):(prefill||null);
   var isNew=!id;
@@ -731,7 +732,7 @@ function renderDID(){
     api('listDIDs').then(function(l){edDates.did=l||[];if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;if(edDates.did.length)renderDID();}).catch(function(){});
     api('getDID').then(function(x){if(x){DID=x;if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;renderDID();}}).catch(function(){});}
   var d=DID, dl=d.dataLabel||d.data||'';
-  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button></div>';
+  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button><span style="flex:1"></span><button class="btn btn-sm" onclick="didDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="didPrint()">🖨️ Exportar PDF</button></div>';
   h+='<div class="did-mast"><div class="big">DID</div><div class="tl">'+(d.subtitulo||'Jornal pessoal de inteligência de mercado')+'</div>'+
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
   if(d.abas&&d.abas.length){
@@ -758,6 +759,74 @@ function loadDIDByName(name){if(!name)return;toast('Carregando edição…');edC
 function loadMIRByName(name){if(!name)return;toast('Carregando edição…');edCur.mir=name;
   api('getMIRByName',name).then(function(x){if(x){MIR=x;renderMIR();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
+
+/* ============================ DID — EXPORT HTML + PDF (identidade índigo/teal, produto vendável) ============================
+ * Layout standalone (self-contained) para "Baixar HTML" e para o "Exportar PDF" (via window.print, trocando o #view
+ * pelo layout de export e restaurando no afterprint). Paleta = identidade DID já usada no app (índigo #3D43A2 / #161A3F +
+ * dourado #E5A93C + cores de setor). Tokens propostos em design-system.md — CONFIRMAR hex final com Luiz antes de "venda". */
+var DID_CSS=`
+.did-report{--p:#3D43A2;--pd:#161A3F;--acc:#E5A93C;--bg:#F4F5FB;--card:#fff;--ink:#1A1C2E;--mut:#6B7088;--line:#E5E7F2;
+  background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.55;font-size:15px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.did-report *{box-sizing:border-box}
+.did-report .wrap{max-width:900px;margin:0 auto;padding:0 22px 34px}
+.did-report header{background:var(--pd);color:#fff;padding:22px}
+.did-report .hd-in{max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+.did-report .brand{font-family:Georgia,serif;font-weight:700;font-size:34px;letter-spacing:.08em;line-height:1}
+.did-report .brand small{display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#aab0e0;margin-top:7px}
+.did-report .hd-meta{text-align:right;font-size:13px;color:#cfd3ee;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.did-report .hd-meta b{color:#fff}
+.did-report .ticker{display:flex;flex-wrap:wrap;background:var(--pd);border-top:3px solid var(--acc)}
+.did-report .tk{flex:1 0 auto;padding:9px 15px;border-right:1px solid #2a2f55;border-top:1px solid #2a2f55;color:#fff;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.did-report .tk .s{color:#9aa0c8;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;display:block}
+.did-report .tk .v{font-weight:700;font-size:13px}
+.did-report .up{color:#5fd99b}.did-report .down{color:#f08a7a}
+.did-report .ticker.sec-tk{border-radius:8px;border-top:0;margin:2px 0 10px}
+.did-report .ticker.sec-tk .tk{border-top:0}
+.did-report h2.sec{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--p);margin:28px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--acc);font-weight:800}
+.did-report .lead{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--p);border-radius:8px;padding:14px 18px;margin-bottom:14px}
+.did-report .lead ul{margin:0;padding-left:18px}.did-report .lead li{margin:7px 0;font-size:13.5px}
+.did-report .blk{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--p);border-radius:8px;padding:4px 18px 14px;margin-bottom:14px}
+.did-report .blk.mkt{border-top-color:#3D43A2}.did-report .blk.crypto{border-top-color:#7A4F9E}.did-report .blk.agro{border-top-color:#4E944F}.did-report .blk.bigtech{border-top-color:#5A54C9}.did-report .blk.tech{border-top-color:#0E9AA7}.did-report .blk.consult{border-top-color:#475569}
+.did-report .item{padding:12px 0;border-top:1px solid var(--line)}.did-report .item:first-of-type{border-top:0}
+.did-report .item h4{margin:0 0 5px;font-size:16px;color:var(--pd);font-family:Georgia,serif}
+.did-report .item p{margin:0 0 7px;color:#2a2c3e}
+.did-report .why{background:#EEF0FA;border-left:3px solid var(--p);border-radius:4px;padding:7px 10px;font-size:13px;margin-bottom:6px}
+.did-report .why b{color:var(--p)}
+.did-report .src{font-size:12px;color:var(--mut);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.did-report .src a{color:var(--p);text-decoration:none;border-bottom:1px solid var(--acc)}
+.did-report .teaser{background:#F1F6F3;border:1px solid var(--line);border-left:4px solid #1a4d4d;border-radius:8px;padding:12px 18px;margin-bottom:14px}
+.did-report .teaser .tag{display:inline-block;background:#1a4d4d;color:#f3f0e6;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;border-radius:4px;padding:2px 8px;margin-bottom:6px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.did-report .teaser .item h4{color:#123838}
+.did-report .teaser .cta{font-size:12.5px;color:#1a4d4d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin-top:6px}
+.did-report footer{max-width:900px;margin:26px auto 0;padding:14px 22px 0;border-top:2px solid var(--acc);font-size:11.5px;color:var(--mut);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+@media(max-width:640px){.did-report .tk{flex:1 0 40%}}
+@media print{.did-report{border:0;border-radius:0}.did-report .blk,.did-report .lead,.did-report .teaser,.did-report .item{break-inside:avoid}}
+`;
+function didTkStripHTML(arr,cls){if(!arr||!arr.length)return '';return '<div class="ticker'+(cls?' '+cls:'')+'">'+arr.map(function(t){var c=t.d==='up'?'up':(t.d==='down'?'down':'');var ar=t.d==='up'?'▲':(t.d==='down'?'▼':'');return '<div class="tk"><span class="s">'+esc(t.s)+'</span><span class="v '+c+'">'+esc(t.v)+(ar?' '+ar:'')+'</span></div>';}).join('')+'</div>';}
+/** No export (produto vendável) remove o markup do chip de marca pessoal do lead, mantendo a frase. Edições novas já vêm sem. */
+function stripPj(s){return String(s==null?'':s).replace(/\s*<span class="pj"[^>]*>([\s\S]*?)<\/span>/gi,' $1');}
+function didExportBodyHTML(d){
+  var dl=d.data||d.dataLabel||'';
+  var sub=(d.subtitulo&&!/pessoal/i.test(d.subtitulo))?d.subtitulo:'Inteligência diária de mercados';
+  var aba=(d.abas&&d.abas.length)?(d.abas.filter(function(a){return a.id==='mercados';})[0]||d.abas[0]):null;
+  var lead=aba?aba.lead:d.lead, secoes=aba?aba.secoes:d.secoes;
+  var h='<header><div class="hd-in"><div class="brand">DID<small>'+esc(sub)+'</small></div><div class="hd-meta"><b>'+esc(dl)+'</b><br>'+esc(d.local||'São Paulo')+' · Edição diária</div></div></header>';
+  h+=didTkStripHTML(d.ticker);
+  h+='<div class="wrap">';
+  if(lead&&lead.length)h+='<h2 class="sec">O que importa hoje</h2><div class="lead"><ul>'+lead.map(function(x){return '<li>'+stripPj(x)+'</li>';}).join('')+'</ul></div>';
+  (secoes||[]).forEach(function(s){
+    if(/saude/i.test(s.id||''))return;   // saúde não entra como seção — vai só como teaser-ponte
+    h+='<h2 class="sec">'+esc(s.nome)+'</h2><div class="blk '+(s.id||'')+'">'+((s.tickers&&s.tickers.length)?didTkStripHTML(s.tickers,'sec-tk'):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';
+  });
+  if(d.saude_teaser){var t=d.saude_teaser;h+='<div class="teaser"><div class="tag">🩺 '+esc(t.titulo||'Saúde hoje')+'</div>'+(t.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p></div>';}).join('')+'<div class="cta">→ Análise completa no <b>MIR Health</b> (relatório de saúde).</div></div>';}
+  h+='</div>';
+  h+='<footer><b>DID</b> · '+esc(sub)+' · Edição de '+esc(dl)+' · '+esc(d.local||'São Paulo')+'.<br>Cotações indicativas; não constituem recomendação de investimento.</footer>';
+  return h;
+}
+function injectDidCss(){if(!document.getElementById('did-css')){var st=document.createElement('style');st.id='did-css';st.textContent=DID_CSS;document.head.appendChild(st);}}
+function didExportISO(){var m=(edCur.did||'').match(/(\d{4}-\d{2}-\d{2})/);return m?m[1]:'';}
+function didPrint(){if(!DID)return;injectDidCss();el('view').innerHTML='<div class="did-report">'+didExportBodyHTML(DID)+'</div>';window.print();}   /* restaura a view interativa no afterprint */
+function didDownloadHTML(){if(!DID)return;var dl=DID.data||DID.dataLabel||'';var doc='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DID — '+esc(dl)+'</title><style>body{margin:0;background:#F4F5FB}'+DID_CSS+'</style></head><body><div class="did-report">'+didExportBodyHTML(DID)+'</div></body></html>';var blob=new Blob([doc],{type:'text/html;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='DID_'+(didExportISO()||'edicao')+'.html';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1500);toast('HTML baixado');}
 
 /* ============================ MIR HEALTH (identidade IHB) ============================ */
 var MIR=null, mirLoaded=false;
