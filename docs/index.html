@@ -877,7 +877,9 @@ function saveFinItem(id){var v=el('f_val').value.trim();if(!v){toast('Descreva o
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
  * quotes do dia vêm do feed diário home-AAAA-MM-DD.json (rotina das 6h). Sem o feed,
  * os cards degradam bem e as quotes caem na rotação local (determinística por dia). */
-var HOME=null, homeLoaded=false;
+var HOME=null, homeLoaded=false, homeMirTry=false;
+function homeTxt(s){return String(s==null?'':s).replace(/<span class="pj"[^>]*>[\s\S]*?<\/span>/gi,'').replace(/<[^>]+>/g,'').replace(/\*+/g,'').replace(/\s+/g,' ').trim();}
+function mirHomeHi(d){if(!d)return '';if(d.resumo_executivo&&d.resumo_executivo.length)return homeTxt(d.resumo_executivo[0]);var ab=(d.abas||[])[0];var it=ab&&ab.itens&&ab.itens[0];return it?homeTxt(it.titulo+'. '+(it.resumo||'')):'';}
 var SELDON_QUOTES=[
  'Para ter sucesso, não basta planejar. É preciso saber improvisar.',
  'A queda de um império é uma coisa colossal — e não se combate com lamentos, mas com preparação.',
@@ -916,6 +918,7 @@ function homeAgenda(){var iso=isoOf(TODAY),evs=eventsOf(iso);if(!evs.length)retu
   return {evs:evs,destaque:star||meet||next||evs[0],wh:wh};}
 function renderHome(){
   if(!homeLoaded){homeLoaded=true;api('getHome').then(function(x){if(x){HOME=x;if(page==='home')renderHome();}}).catch(function(){});}
+  if(!MIR&&!homeMirTry){homeMirTry=true;api('getMIR').then(function(x){if(x){MIR=x;if(page==='home')renderHome();}}).catch(function(){});}
   var hr=new Date().getHours(),sau=hr<12?'Bom dia':(hr<18?'Boa tarde':'Boa noite');
   var w=wxOf(isoOf(TODAY));
   var isToday=(HOME&&HOME.data===isoOf(TODAY));
@@ -932,7 +935,7 @@ function renderHome(){
     var rest=ag.evs.filter(function(e){return e!==d0;}).slice(0,3);
     if(rest.length)h+='<div class="hev-list">'+rest.map(function(e){return '<div class="hev"><span class="t">'+esc(e.start)+'</span> '+esc(e.titulo)+'</div>';}).join('')+'</div>';
     var done=0,miss=0,pend=0;ag.evs.forEach(function(e){if(e.status==='done')done++;else if(e.status==='miss')miss++;else pend++;});
-    h+='<div class="hstatus">'+(done?'<span class="hs done">✓ '+done+' feito'+(done>1?'s':'')+'</span>':'')+(pend?'<span class="hs pend">○ '+pend+' pendente'+(pend>1?'s':'')+'</span>':'')+(miss?'<span class="hs miss">✗ '+miss+' não feito'+(miss>1?'s':'')+'</span>':'')+'</div>';
+    h+='<div class="hstatus"><span class="hs done">✓ '+done+' feito'+(done===1?'':'s')+'</span><span class="hs pend">○ '+pend+' pendente'+(pend===1?'':'s')+'</span>'+(miss?'<span class="hs miss">✗ '+miss+' não feito'+(miss>1?'s':'')+'</span>':'')+'</div>';
     h+='<div class="hfoot">'+ag.evs.length+' evento'+(ag.evs.length>1?'s':'')+(ag.wh?' · <b>'+fmtH(ag.wh)+'h</b> de trabalho':'')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
   }else h+='<div class="hempty">Sem compromissos hoje 🎉</div><div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
   h+='</div>';
@@ -952,6 +955,11 @@ function renderHome(){
   if(HOME&&HOME.mercado){var mk=HOME.mercado;h+='<h4>'+esc(mk.titulo||'')+'</h4><p>'+esc(mk.resumo||'')+'</p>'+(mk.fonte?'<div class="src">Fonte: <a href="'+(mk.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(mk.fonte.nome||'')+'</a></div>':'');}
   else h+='<div class="hempty">A edição do dia chega com a rotina das 6h.</div>';
   h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'did\')">Ler o DID →</button></div></div>';
+  /* MIR Health — destaque do relatório de saúde (ao vivo da última edição) */
+  h+='<div class="card hcard"><h3>🩺 MIR Health</h3>';
+  var mhi=MIR?mirHomeHi(MIR):'';
+  h+=mhi?'<p>'+esc(mhi)+'</p>':'<div class="hempty">Abra para ver o relatório de saúde.</div>';
+  h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'mir\')">Abrir MIR Health →</button></div></div>';
   /* Esportes */
   h+='<div class="card hcard"><h3>🏟️ Esportes'+(stale?' '+stale:'')+'</h3>';
   if(HOME&&HOME.esportes){var sp=HOME.esportes;
@@ -965,7 +973,7 @@ function renderHome(){
   h+='<div class="card hcard"><h3>🔭 Radar'+(stale?' '+stale:'')+'</h3>';
   if(HOME&&HOME.extra){h+='<h4>'+esc(HOME.extra.titulo||'')+'</h4><p>'+esc(HOME.extra.resumo||'')+'</p>'+(HOME.extra.fonte?'<div class="src">Fonte: <a href="'+(HOME.extra.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(HOME.extra.fonte.nome||'')+'</a></div>':'');}
   else h+='<div class="hempty">—</div>';
-  h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'mir\')">Abrir MIR Health →</button></div></div>';
+  h+='</div>';
   h+='</div>';
   /* Quotes */
   var sq=(HOME&&HOME.seldon)||SELDON_QUOTES[dayOfYear()%SELDON_QUOTES.length];
