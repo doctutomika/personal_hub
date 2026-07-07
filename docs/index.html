@@ -291,6 +291,25 @@ a{color:inherit}
 .hev-list{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
 .hev{font-size:12.5px;color:#444}
 .hev .t{font-weight:700;color:var(--ind2);font-variant-numeric:tabular-nums}
+.hh-per{display:inline-block;font-size:11px;font-weight:700;background:rgba(255,255,255,.18);color:#fff;border-radius:20px;padding:2px 10px;margin-left:10px;vertical-align:middle;letter-spacing:.02em}
+.home-status{background:var(--ind0);color:#EDEFFA;border-left:4px solid var(--gold);border-radius:var(--r);padding:10px 16px;font-size:13px;margin-bottom:14px;line-height:1.5}
+.home-status b{color:#fff}
+.hstatus{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0}
+.hs{font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px}
+.hs.done{background:#E4F5EC;color:#1F9D57}
+.hs.pend{background:#EEF0FA;color:#5a5f86}
+.hs.miss{background:#FBE9E7;color:#C8462F}
+.hfin-sec{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:9px 0 1px}
+.hfin-sec:first-of-type{margin-top:2px}
+.hfin-list{display:flex;flex-direction:column;gap:1px}
+.hfin{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px dashed var(--line);font-size:13px}
+.hfin:first-child{border-top:0}
+.hfin-d{font-weight:700;color:var(--ind2);font-variant-numeric:tabular-nums;min-width:44px}
+.hfin-t{flex:1;color:#2a2c3e}
+.hfin-tag{font-size:9px;font-weight:800;background:var(--ind-soft);color:var(--ind2);border-radius:4px;padding:1px 4px;vertical-align:middle}
+.hfin-r{font-size:11px;color:var(--muted);white-space:nowrap}
+.hfin.due .hfin-t{color:var(--ind0);font-weight:600}
+.hfin.due .hfin-r{background:var(--gold);color:#3a2c00;font-weight:800;border-radius:20px;padding:1px 8px}
 .hfoot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px;margin-top:8px}
 .hfoot b{color:var(--ind2)}
 .hempty{font-size:13px;color:var(--muted);font-style:italic;padding:8px 0}
@@ -678,8 +697,8 @@ var sysTab='cat';
 function exportAgenda(){toast('Exportando…');api('exportState').then(function(r){toast(r||'Exportado');}).catch(function(){toast('Falha ao exportar');});}
 function renderSys(){
   var h='<div class="page-head"><h1>Gestão do Sistema</h1><div class="sub">Tabelas de apoio editáveis</div><div class="spacer"></div><button class="btn btn-sm" onclick="exportAgenda()" title="Grava state/current.json no Drive para o cron ler">⬇ Exportar agenda</button></div>';
-  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
-  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else h+=sysSimple(sysTab);
+  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais'],['fin','Compromissos financeiros']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
+  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else if(sysTab==='fin')h+=sysFin();else h+=sysSimple(sysTab);
   el('view').innerHTML=h;
 }
 /** Locais agrupados por contexto (pai = Trabalho | Pessoal; legado sem pai conta como Trabalho). */
@@ -800,6 +819,60 @@ function loadMIRByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='mir')tts
   api('getMIRByName',name).then(function(x){if(x){MIR=x;renderMIR();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
 
+/* ============================ COMPROMISSOS FINANCEIROS (cat:'fin') ============================
+ * Recorrentes, guardados como config (sem migrar schema): ordem=dia do mês, pai=regra de dia útil
+ * ('exato'|'antes'|'depois'), cor=periodicidade (''=mensal | 'tri:1,4,7,10'=trimestral, meses 1-based).
+ * Ajuste de dia útil considera fins de semana + feriados NACIONAIS FIXOS (móveis/municipais não). */
+var BR_HOL=['01-01','04-21','05-01','09-07','10-12','11-02','11-15','11-20','12-25'];  // nacionais de data fixa
+function isBizDay(d){var wd=d.getDay();if(wd===0||wd===6)return false;return BR_HOL.indexOf(pad(d.getMonth()+1)+'-'+pad(d.getDate()))<0;}
+function finMonths(cor){var m=/^tri:([\d,]+)/.exec(cor||'');return m?m[1].split(',').map(function(x){return (+x)-1;}):null;}   // →0-based, null=mensal
+function finApplies(item,m0){var mm=finMonths(item.cor);return !mm||mm.indexOf(m0)>=0;}
+function finEffDate(dia,rule,y,m0){var dim=new Date(y,m0+1,0).getDate();var d=new Date(y,m0,Math.min(dia,dim));if(rule==='exato')return d;var step=(rule==='antes')?-1:1;var g=0;while(!isBizDay(d)&&g<15){d.setDate(d.getDate()+step);g++;}return d;}
+function finUpcoming(win){var t=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());var end=new Date(t);end.setDate(end.getDate()+win);var out=[];
+  byCat('fin').forEach(function(it){[0,1].forEach(function(mo){var ref=new Date(t.getFullYear(),t.getMonth()+mo,1);if(!finApplies(it,ref.getMonth()))return;var d=finEffDate(+it.ordem||1,it.pai||'exato',ref.getFullYear(),ref.getMonth());if(d>=t&&d<=end)out.push({item:it,date:d});});});
+  out.sort(function(a,b){return a.date-b.date;});return out;}
+function finRelDay(d){var t=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());var n=Math.round((d-t)/86400000);return n===0?'hoje':(n===1?'amanhã':'em '+n+' dias');}
+var FIN_RULES={exato:'no dia exato',antes:'ou dia útil anterior',depois:'ou dia útil posterior'};
+function finRuleLabel(c){return (+c.ordem===1&&c.pai==='depois')?'1º dia útil':(FIN_RULES[c.pai||'exato']||'');}
+var FIN_PRESETS=[
+ {dia:1, pai:'depois',cor:'',           valor:'Emitir NFs (Unimed e QBem)'},
+ {dia:3, pai:'antes', cor:'',           valor:'Cycle (escola)'},
+ {dia:5, pai:'depois',cor:'',           valor:'Hebraica'},
+ {dia:5, pai:'depois',cor:'',           valor:'Cartão C6'},
+ {dia:10,pai:'antes', cor:'',           valor:'ISS'},
+ {dia:11,pai:'antes', cor:'',           valor:'Dívida Santo André'},
+ {dia:13,pai:'depois',cor:'',           valor:'Extrato M&M para Contabilidade'},
+ {dia:15,pai:'depois',cor:'',           valor:'Cartão Inter'},
+ {dia:20,pai:'antes', cor:'',           valor:'Plano de Saúde'},
+ {dia:20,pai:'antes', cor:'',           valor:'Parcela IPTU'},
+ {dia:24,pai:'antes', cor:'',           valor:'Singular (escola)'},
+ {dia:25,pai:'antes', cor:'',           valor:'PIS/COFINS'},
+ {dia:26,pai:'depois',cor:'',           valor:'Cartão Itaú'},
+ {dia:31,pai:'antes', cor:'tri:1,4,7,10',valor:'IRPJ/CSLL (federais trimestrais)'}];
+function finSeedDefaults(){if(byCat('fin').length){toast('Já há compromissos');return;}FIN_PRESETS.forEach(function(p,i){CFG.push({id:'fin-'+(i+1),cat:'fin',valor:p.valor,cor:p.cor,ordem:p.dia,pai:p.pai,gov:'usuario'});});saveCfg();toast('Lista padrão carregada');renderSys();}
+function sysFin(){
+  var items=byCat('fin');
+  var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Compromissos <b>recorrentes</b> (dia do mês + regra de dia útil). Aparecem na Home (próximos vencimentos) e servem de base para os itens de agenda. Ajuste considera fins de semana + feriados nacionais fixos.</div>';
+  h+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">'+(items.length?'':'<button class="btn btn-sm" onclick="finSeedDefaults()">↧ Carregar lista padrão</button>')+'<button class="btn btn-sm btn-primary" onclick="openFin(\'\')">＋ Compromisso</button></div>';
+  if(!items.length)return h+'<div class="hempty" style="text-align:center;padding:22px">Nenhum compromisso ainda.<br>Clique em <b>Carregar lista padrão</b> para começar.</div>';
+  h+='<table class="tbl"><thead><tr><th style="width:56px">Dia</th><th>Compromisso</th><th style="width:160px">Regra</th><th style="width:96px">Período</th><th style="width:76px">Ações</th></tr></thead><tbody>';
+  items.forEach(function(c){h+='<tr><td><b>'+esc(String(c.ordem||''))+'</b></td><td>'+esc(c.valor)+'</td><td class="muted" style="font-size:12px">'+esc(finRuleLabel(c))+'</td><td class="muted" style="font-size:12px">'+(finMonths(c.cor)?'Trimestral':'Mensal')+'</td><td><button class="icbtn" onclick="openFin(\''+c.id+'\')">✎</button> <button class="icbtn" onclick="delCfg(\''+c.id+'\')">×</button></td></tr>';});
+  return h+'</tbody></table>';
+}
+function openFin(id){var c=id?cfgById(id):{valor:'',ordem:1,pai:'depois',cor:''};var mm=finMonths(c.cor);
+  openModal('<div class="modal-head"><h3>'+(id?'Editar ':'Novo ')+'compromisso financeiro</h3><button class="x" onclick="closeModal()">×</button></div>'+
+   '<div class="modal-body">'+
+   '<div class="field"><label>Compromisso</label><input id="f_val" value="'+esc(c.valor)+'" placeholder="ex.: Cartão Itaú"></div>'+
+   '<div class="grid2"><div class="field"><label>Dia do mês</label><input id="f_dia" type="number" min="1" max="31" value="'+(c.ordem||1)+'"></div>'+
+   '<div class="field"><label>Regra de dia útil</label><select id="f_rule"><option value="exato"'+(c.pai==='exato'?' selected':'')+'>No dia exato</option><option value="antes"'+(c.pai==='antes'?' selected':'')+'>Ou dia útil anterior</option><option value="depois"'+((c.pai==='depois'||!c.pai)?' selected':'')+'>Ou dia útil posterior / 1º dia útil</option></select></div></div>'+
+   '<div class="field"><label>Periodicidade</label><select id="f_per"><option value=""'+(!mm?' selected':'')+'>Mensal</option><option value="tri:1,4,7,10"'+(mm?' selected':'')+'>Trimestral (jan / abr / jul / out)</option></select></div>'+
+   '</div><div class="modal-foot"><div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveFinItem(\''+(id||'')+'\')">Salvar</button></div></div>');
+}
+function saveFinItem(id){var v=el('f_val').value.trim();if(!v){toast('Descreva o compromisso');return;}
+  var o={valor:v,ordem:Math.max(1,Math.min(31,+el('f_dia').value||1)),pai:el('f_rule').value,cor:el('f_per').value};
+  if(id){Object.assign(cfgById(id),o);}else{o.id='fin-'+Date.now();o.cat='fin';o.gov='usuario';CFG.push(o);}
+  saveCfg();closeModal();toast('Salvo');renderSys();}
+
 /* ============================ HOME (Início) ============================
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
  * quotes do dia vêm do feed diário home-AAAA-MM-DD.json (rotina das 6h). Sem o feed,
@@ -845,7 +918,10 @@ function renderHome(){
   if(!homeLoaded){homeLoaded=true;api('getHome').then(function(x){if(x){HOME=x;if(page==='home')renderHome();}}).catch(function(){});}
   var hr=new Date().getHours(),sau=hr<12?'Bom dia':(hr<18?'Boa tarde':'Boa noite');
   var w=wxOf(isoOf(TODAY));
-  var h='<div class="home-hero"><div><div class="hh-sau">'+sau+' 👋</div><div class="hh-date">'+dateFull(TODAY)+'</div></div><div class="hh-wx">'+(w?wxToday():'<span style="opacity:.7;font-size:12px">sem previsão ainda</span>')+(WXMETA&&WXMETA.local?'<div class="hh-loc">'+esc(WXMETA.local)+'</div>':'')+'</div></div>';
+  var isToday=(HOME&&HOME.data===isoOf(TODAY));
+  var perBadge=(isToday&&HOME.periodo)?'<span class="hh-per">'+(HOME.periodo==='noite'?'🌙 noite':'☀️ manhã')+'</span>':'';
+  var h='<div class="home-hero"><div><div class="hh-sau">'+sau+' 👋'+perBadge+'</div><div class="hh-date">'+dateFull(TODAY)+'</div></div><div class="hh-wx">'+(w?wxToday():'<span style="opacity:.7;font-size:12px">sem previsão ainda</span>')+(WXMETA&&WXMETA.local?'<div class="hh-loc">'+esc(WXMETA.local)+'</div>':'')+'</div></div>';
+  if(isToday&&HOME.periodo==='noite'&&HOME.status)h+='<div class="home-status">🌙 <b>Fechamento do dia:</b> '+esc(HOME.status)+'</div>';
   var stale=(HOME&&HOME.data&&HOME.data!==isoOf(TODAY))?'<span class="hstale">edição de '+HOME.data.split('-').reverse().slice(0,2).join('/')+'</span>':'';
   h+='<div class="home-grid">';
   /* Agenda de hoje */
@@ -855,9 +931,22 @@ function renderHome(){
     h+='<div class="hev-destaque" onclick="go(\'agenda\')"><div class="t">'+esc(d0.start)+'–'+esc(d0.end)+'</div><div class="ti">'+esc(d0.titulo)+'</div><div>'+(d0.projeto?'<span class="chip" style="background:#EEF0FA;color:#3D43A2">'+esc(d0.projeto)+'</span> ':'')+(d0.subtipo?'<span class="chip" style="background:#EEF0FA;color:#5a5f86">'+esc(d0.subtipo)+'</span>':'')+'</div></div>';
     var rest=ag.evs.filter(function(e){return e!==d0;}).slice(0,3);
     if(rest.length)h+='<div class="hev-list">'+rest.map(function(e){return '<div class="hev"><span class="t">'+esc(e.start)+'</span> '+esc(e.titulo)+'</div>';}).join('')+'</div>';
+    var done=0,miss=0,pend=0;ag.evs.forEach(function(e){if(e.status==='done')done++;else if(e.status==='miss')miss++;else pend++;});
+    h+='<div class="hstatus">'+(done?'<span class="hs done">✓ '+done+' feito'+(done>1?'s':'')+'</span>':'')+(pend?'<span class="hs pend">○ '+pend+' pendente'+(pend>1?'s':'')+'</span>':'')+(miss?'<span class="hs miss">✗ '+miss+' não feito'+(miss>1?'s':'')+'</span>':'')+'</div>';
     h+='<div class="hfoot">'+ag.evs.length+' evento'+(ag.evs.length>1?'s':'')+(ag.wh?' · <b>'+fmtH(ag.wh)+'h</b> de trabalho':'')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
   }else h+='<div class="hempty">Sem compromissos hoje 🎉</div><div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
   h+='</div>';
+  /* Financeiro — Hoje (reminders do dia) + Próximos (os 2 seguintes) */
+  var fuAll=finUpcoming(70);
+  var finHoje=fuAll.filter(function(x){return finRelDay(x.date)==='hoje';});
+  var finProx=fuAll.filter(function(x){return finRelDay(x.date)!=='hoje';}).slice(0,2);
+  var finRow=function(x,due,showRel){return '<div class="hfin'+(due?' due':'')+'"><span class="hfin-d">'+pad(x.date.getDate())+'/'+pad(x.date.getMonth()+1)+'</span><span class="hfin-t">'+esc(x.item.valor)+(finMonths(x.item.cor)?' <span class="hfin-tag">trim.</span>':'')+'</span>'+(showRel?'<span class="hfin-r">'+finRelDay(x.date)+'</span>':'')+'</div>';};
+  h+='<div class="card hcard"><h3>💰 Financeiro</h3>';
+  h+='<div class="hfin-sec">Hoje</div>';
+  h+=finHoje.length?('<div class="hfin-list">'+finHoje.map(function(x){return finRow(x,true,false);}).join('')+'</div>'):'<div class="hempty" style="padding:3px 0 6px">Você não tem compromissos hoje</div>';
+  h+='<div class="hfin-sec">Próximos</div>';
+  h+=finProx.length?('<div class="hfin-list">'+finProx.map(function(x){return finRow(x,false,true);}).join('')+'</div>'):'<div class="hempty" style="padding:3px 0">Nada à vista</div>';
+  h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="sysTab=\'fin\';go(\'sys\')">Gerenciar →</button></div></div>';
   /* Mercado */
   h+='<div class="card hcard"><h3>📈 Mercado'+(stale?' '+stale:'')+'</h3>';
   if(HOME&&HOME.mercado){var mk=HOME.mercado;h+='<h4>'+esc(mk.titulo||'')+'</h4><p>'+esc(mk.resumo||'')+'</p>'+(mk.fonte?'<div class="src">Fonte: <a href="'+(mk.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(mk.fonte.nome||'')+'</a></div>':'');}
