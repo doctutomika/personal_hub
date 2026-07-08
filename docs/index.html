@@ -606,7 +606,9 @@ function noteHTML(raw){
   return out;
 }
 function goToday(){cur=new Date(TODAY);renderAgenda();window.scrollTo(0,0);}
-function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e)return;e.status=e.status===''?'done':(e.status==='done'?'miss':'');saveEv();renderAgenda();}
+function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e)return;e.status=e.status===''?'done':(e.status==='done'?'miss':'');saveEv();
+  if(e.status==='done'&&e.subsub==='Livro')livroOnRead();   // leitura de livro do dia → livro ativo
+  renderAgenda();}
 
 
 /* ============================ MODAL EVENTO ============================ */
@@ -719,8 +721,8 @@ var sysTab='cat';
 function exportAgenda(){toast('Exportando…');api('exportState').then(function(r){toast(r||'Exportado');}).catch(function(){toast('Falha ao exportar');});}
 function renderSys(){
   var h='<div class="page-head"><h1>Gestão do Sistema</h1><div class="sub">Tabelas de apoio editáveis</div><div class="spacer"></div><button class="btn btn-sm" onclick="exportAgenda()" title="Grava state/current.json no Drive para o cron ler">⬇ Exportar agenda</button></div>';
-  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais'],['fin','Compromissos financeiros']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
-  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else if(sysTab==='fin')h+=sysFin();else h+=sysSimple(sysTab);
+  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais'],['fin','Compromissos financeiros'],['livro','Livros']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
+  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else if(sysTab==='fin')h+=sysFin();else if(sysTab==='livro')h+=sysLivros();else h+=sysSimple(sysTab);
   el('view').innerHTML=h;
 }
 /** Locais agrupados por contexto (pai = Trabalho | Pessoal; legado sem pai conta como Trabalho). */
@@ -894,6 +896,62 @@ function saveFinItem(id){var v=el('f_val').value.trim();if(!v){toast('Descreva o
   var o={valor:v,ordem:Math.max(1,Math.min(31,+el('f_dia').value||1)),pai:el('f_rule').value,cor:el('f_per').value};
   if(id){Object.assign(cfgById(id),o);}else{o.id='fin-'+Date.now();o.cat='fin';o.gov='usuario';CFG.push(o);}
   saveCfg();closeModal();toast('Salvo');renderSys();}
+
+/* ============================ LIVROS (cat:'livro') ============================
+ * Guardados como config sem migrar schema: valor=título, pai=status ('espera'|'lendo'|'lido'),
+ * cor="iniciado|concluido" (ISO), ordem. "Em leitura" = livro ativo; tempo de leitura = dias início→fim.
+ * Ao marcar um evento Leitura→Livro como feito, o app usa o livro ativo (pergunta se houver >1). */
+var LIVRO_ST={espera:'Na lista de espera',lendo:'Em leitura',lido:'Lido'};
+function livros(){return CFG.filter(function(x){return x.cat==='livro';}).sort(function(a,b){return (a.ordem||0)-(b.ordem||0);});}
+function livrosByStatus(s){return livros().filter(function(l){return (l.pai||'espera')===s;});}
+function livroDts(l){var p=String(l.cor||'').split('|');return {ini:p[0]||'',fim:p[1]||''};}
+function livroSetDts(l,ini,fim){l.cor=(ini||'')+'|'+(fim||'');}
+function daysBetween(a,b){return Math.max(0,Math.round((parseISO(b)-parseISO(a))/86400000));}
+function livroTempo(l){var d=livroDts(l);if(d.ini&&d.fim)return 'lido em '+(daysBetween(d.ini,d.fim)||1)+' dias';if(d.ini)return 'lendo há '+(daysBetween(d.ini,isoOf(TODAY))||0)+' dias';return '';}
+function sysLivros(){
+  var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Seus livros por status. <b>Em leitura</b> = livro ativo. O <b>tempo de leitura</b> conta os dias de início→fim. Ao marcar a leitura de <b>Livro</b> na agenda, o sistema usa o livro ativo (pergunta se houver mais de um).</div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-sm btn-primary" onclick="openLivro(\'\')">＋ Livro</button></div>';
+  if(!livros().length)return h+'<div class="hempty" style="text-align:center;padding:22px">Nenhum livro ainda. Adicione o que está lendo.</div>';
+  [['lendo','📖 Em leitura'],['espera','🕒 Na lista de espera'],['lido','✓ Lido']].forEach(function(g){
+    var items=livrosByStatus(g[0]); if(!items.length)return;
+    h+='<div class="grp-h"><b>'+g[1]+'</b> <span class="muted" style="font-size:11px">('+items.length+')</span></div>';
+    items.forEach(function(l){var t=livroTempo(l);
+      h+='<div class="sub-block"><div class="sub-row"><b>'+esc(l.valor)+'</b>'+(t?' <span class="muted" style="font-size:11px">'+esc(t)+'</span>':'')+'<span style="flex:1"></span>'+
+        '<select class="locsel" style="max-width:130px" onchange="livroStatus(\''+l.id+'\',this.value)">'+['espera','lendo','lido'].map(function(st){return '<option value="'+st+'"'+((l.pai||'espera')===st?' selected':'')+'>'+LIVRO_ST[st]+'</option>';}).join('')+'</select>'+
+        '<button class="icbtn" title="editar" onclick="openLivro(\''+l.id+'\')">✎</button><button class="icbtn" title="excluir" onclick="delCfg(\''+l.id+'\')">×</button></div></div>';
+    });
+  });
+  return h;
+}
+function livroApplyStatus(l,st){var d=livroDts(l);
+  if(st==='lendo'&&!d.ini)d.ini=isoOf(TODAY);
+  if(st==='lido'){if(!d.ini)d.ini=isoOf(TODAY);d.fim=isoOf(TODAY);}
+  if(st==='espera'){d.ini='';d.fim='';}
+  livroSetDts(l,d.ini,d.fim);l.pai=st;}
+function livroStatus(id,st){var l=cfgById(id);if(!l)return;livroApplyStatus(l,st);saveCfg();toast(esc(l.valor)+': '+LIVRO_ST[st]);renderSys();}
+function openLivro(id){var c=id?cfgById(id):{valor:'',pai:'espera'};
+  openModal('<div class="modal-head"><h3>'+(id?'Editar ':'Novo ')+'livro</h3><button class="x" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body"><div class="field"><label>Título</label><input id="lv_val" value="'+esc(c.valor)+'" placeholder="ex.: Lifespan — David Sinclair"></div>'+
+    '<div class="field"><label>Status</label><select id="lv_st"><option value="espera"'+((c.pai||'espera')==='espera'?' selected':'')+'>Na lista de espera</option><option value="lendo"'+(c.pai==='lendo'?' selected':'')+'>Em leitura (ativo)</option><option value="lido"'+(c.pai==='lido'?' selected':'')+'>Lido</option></select></div></div>'+
+    '<div class="modal-foot"><div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveLivroItem(\''+(id||'')+'\')">Salvar</button></div></div>');
+}
+function saveLivroItem(id){var v=el('lv_val').value.trim();if(!v){toast('Dê um título');return;}var st=el('lv_st').value;
+  var l=id?cfgById(id):{id:'livro-'+Date.now(),cat:'livro',valor:'',cor:'',ordem:livros().length+1,pai:'espera',gov:'usuario'};
+  l.valor=v;livroApplyStatus(l,st);
+  if(!id)CFG.push(l);
+  saveCfg();closeModal();toast('Salvo');renderSys();}
+/** Chamado ao marcar um evento Leitura→Livro como feito: usa o livro ativo; escolhe se houver 0 ou >1. */
+function livroOnRead(){var at=livrosByStatus('lendo');
+  if(at.length===1){toast('📖 Leitura registrada: '+at[0].valor);return;}
+  if(at.length>1){livroPick(at,'Qual livro você leu?',function(l){toast('📖 Leitura: '+l.valor);});return;}
+  var wait=livrosByStatus('espera');
+  if(!wait.length){toast('Sem livro ativo — cadastre em Sistema → Livros');return;}
+  livroPick(wait,'Qual livro você começou a ler?',function(l){livroStatus(l.id,'lendo');});
+}
+var _livroPick=null;
+function livroPick(list,title,cb){_livroPick={list:list,cb:cb};
+  openModal('<div class="modal-head"><h3>'+esc(title)+'</h3><button class="x" onclick="closeModal()">×</button></div><div class="modal-body">'+list.map(function(l,i){return '<button class="btn" style="width:100%;margin-bottom:6px;justify-content:flex-start" onclick="livroPicked('+i+')">📕 '+esc(l.valor)+'</button>';}).join('')+'</div>');}
+function livroPicked(i){var p=_livroPick;closeModal();if(p&&p.cb)p.cb(p.list[i]);}
 
 /* ============================ HOME (Início) ============================
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
