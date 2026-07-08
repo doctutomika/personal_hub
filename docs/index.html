@@ -108,6 +108,13 @@ a{color:inherit}
 .locsel{display:block;width:100%;margin-top:6px;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;color:var(--ink)}
 .day-sum{font-size:10.5px;color:var(--muted);margin-top:3px}
 .day-sum b{color:var(--ind2)}
+.day-n{margin-left:6px;font-weight:700;color:var(--ind2)}
+.dh-toggle{cursor:pointer}
+.dh-t{display:flex;align-items:center;gap:6px}
+.chev{font-size:10px;color:var(--muted);transition:transform .15s;display:inline-block}
+.day.collapsed .chev{transform:rotate(-90deg)}
+.day.collapsed .day-body{display:none}
+.wkbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}
 /* clima */
 .wxbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-4px 0 14px;padding:9px 13px;background:linear-gradient(90deg,#F4F6FD,#EEF0FA);border:1px solid var(--line);border-radius:12px}
 .wxbar-date{font-weight:700;color:var(--ind0)}
@@ -514,6 +521,11 @@ el('todayStr').textContent=pad(TODAY.getDate())+'/'+pad(TODAY.getMonth()+1);
 function weekDays(){var m=weekStart();var a=[];for(var i=0;i<7;i++){var d=new Date(m);d.setDate(m.getDate()+i);a.push(d);}return a;}
 function eventsOf(iso){return EVENTS.filter(function(e){return e.date===iso;}).sort(function(a,b){return toMin(a.start)-toMin(b.start);});}
 function renderAgenda(){ if(agView==='dia')return renderDay(); if(agView==='mes')return renderMonth(); return renderWeek(); }
+/* Acordeon da semana: colapsa o corpo do dia, deixando só o cabeçalho (data/clima/local/horas). */
+var agCollapsed=(function(){try{return JSON.parse(localStorage.getItem('hub_wk_collapsed')||'{}');}catch(e){return {};}})();
+function saveCollapsed(){try{localStorage.setItem('hub_wk_collapsed',JSON.stringify(agCollapsed));}catch(e){}}
+function toggleDay(iso){agCollapsed[iso]=!agCollapsed[iso];saveCollapsed();var el2=document.querySelector('.day[data-iso="'+iso+'"]');if(el2)el2.classList.toggle('collapsed',!!agCollapsed[iso]);}
+function collapseAllDays(v){weekDays().forEach(function(d){agCollapsed[isoOf(d)]=v;});saveCollapsed();renderWeek();}
 function navAg(n){ if(agView==='dia')cur.setDate(cur.getDate()+n); else if(agView==='mes')cur.setMonth(cur.getMonth()+n); else cur.setDate(cur.getDate()+n*7); cur=new Date(cur); renderAgenda(); window.scrollTo(0,0); }
 function agHeader(label,sub){
   return '<div class="page-head"><h1>Agenda</h1><div class="seg">'+
@@ -526,10 +538,12 @@ function renderWeek(){
   var days=weekDays(), label=pad(days[0].getDate())+'–'+pad(days[6].getDate())+' '+MON[days[6].getMonth()]+' '+days[6].getFullYear();
   var w=0,p=0; EVENTS.forEach(function(e){if(days.some(function(d){return isoOf(d)===e.date;})){if(isWork(e))w+=durH(e);else p+=durH(e);}});
   var h=agHeader(label,'<b>'+fmtH(w)+'h</b> trab · '+fmtH(p)+'h pess')+wxBarHTML();
+  var allCol=days.every(function(d){return agCollapsed[isoOf(d)];});
+  h+='<div class="wkbar"><button class="btn btn-sm" onclick="collapseAllDays('+(allCol?'false':'true')+')">'+(allCol?'▾ Expandir todos':'▸ Colapsar todos')+'</button></div>';
   h+='<div class="weekgrid">';
   days.forEach(function(d){
     var iso=isoOf(d),evs=eventsOf(iso),today=isoOf(d)===isoOf(TODAY),wH=0;evs.forEach(function(e){if(isWork(e))wH+=durH(e);});
-    h+='<div class="day'+(today?' today':'')+'"><div class="day-head"><div class="row"><div><div class="dow">'+DOW[(d.getDay()+6)%7]+'</div><div class="dt">'+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'</div></div>'+wxChip(iso)+'</div>'+locSelect(iso,getLoc(iso))+'<div class="day-sum">'+(wH?('<b>'+fmtH(wH)+'h</b> trabalho'):'&nbsp;')+'</div></div><div class="day-body">';
+    h+='<div class="day'+(today?' today':'')+(agCollapsed[iso]?' collapsed':'')+'" data-iso="'+iso+'"><div class="day-head"><div class="row dh-toggle" onclick="toggleDay(\''+iso+'\')" title="Colapsar/expandir dia"><div class="dh-t"><span class="chev">▾</span><div><div class="dow">'+DOW[(d.getDay()+6)%7]+'</div><div class="dt">'+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'</div></div></div>'+wxChip(iso)+'</div>'+locSelect(iso,getLoc(iso))+'<div class="day-sum">'+(wH?('<b>'+fmtH(wH)+'h</b> trabalho'):'&nbsp;')+(evs.length?'<span class="day-n">'+evs.length+' ev</span>':'')+'</div></div><div class="day-body">';
     if(!evs.length)h+='<div class="empty-day">Sem compromissos</div>';
     evs.forEach(function(e){h+=evCard(e);});
     h+='</div></div>';
@@ -920,11 +934,16 @@ function dayOfYear(){var s=new Date(TODAY.getFullYear(),0,1);return Math.floor((
 /** Destaque da agenda de hoje: ★ no título > primeira Reunião > próximo evento a partir de agora. */
 function homeAgenda(){var iso=isoOf(TODAY),evs=eventsOf(iso);if(!evs.length)return null;
   var now=new Date(),nmin=now.getHours()*60+now.getMinutes();
-  var star=evs.filter(function(e){return /★|⭐/.test(e.titulo||'');})[0];
-  var meet=evs.filter(function(e){return e.subtipo==='Reunião';})[0];
-  var next=evs.filter(function(e){return toMin(e.start)>=nmin;})[0];
+  /* "a fazer" = ainda não feito/marcado E que não passou do horário (fim no futuro) */
+  var todo=evs.filter(function(e){return e.status!=='done'&&e.status!=='miss'&&toMin(e.end)>nmin;});
+  var star=todo.filter(function(e){return /★|⭐/.test(e.titulo||'');})[0];
+  var meet=todo.filter(function(e){return e.subtipo==='Reunião';})[0];
   var wh=0;evs.forEach(function(e){if(isWork(e))wh+=durH(e);});
-  return {evs:evs,destaque:star||meet||next||evs[0],wh:wh};}
+  return {evs:evs,todo:todo,destaque:star||meet||todo[0]||null,wh:wh};}
+/** Atualiza a Home: relê eventos (pull), clima, e refaz DID/MIR/feed → status de feitos/pendentes fresco. */
+function homeRefresh(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();toast('Atualizando…');
+  homeLoaded=false;homeMirTry=false;
+  api('pullAgenda').then(function(r){if(r&&r.events)EVENTS=r.events;}).catch(function(){}).then(function(){wxLoad();if(page==='home')renderHome();toast('Atualizado ✓');});}
 function renderHome(){
   if(!homeLoaded){homeLoaded=true;api('getHome').then(function(x){if(x){HOME=x;if(page==='home')renderHome();}}).catch(function(){});}
   if(!MIR&&!homeMirTry){homeMirTry=true;api('getMIR').then(function(x){if(x){MIR=x;if(page==='home')renderHome();}}).catch(function(){});}
@@ -941,11 +960,13 @@ function renderHome(){
   h+='<div class="home-grid">';
   /* Agenda de hoje */
   var ag=homeAgenda();
-  h+='<div class="card hcard"><h3>🗓️ Hoje na agenda</h3>';
+  h+='<div class="card hcard"><h3>🗓️ Hoje na agenda<span style="flex:1"></span><button class="icbtn" title="Atualizar (relê eventos e status)" onclick="homeRefresh(event)">↻</button></h3>';
   if(ag){var d0=ag.destaque;
-    h+='<div class="hev-destaque" onclick="go(\'agenda\')"><div class="t">'+esc(d0.start)+'–'+esc(d0.end)+'</div><div class="ti">'+esc(d0.titulo)+'</div><div>'+(d0.projeto?'<span class="chip" style="background:#EEF0FA;color:#3D43A2">'+esc(d0.projeto)+'</span> ':'')+(d0.subtipo?'<span class="chip" style="background:#EEF0FA;color:#5a5f86">'+esc(d0.subtipo)+'</span>':'')+'</div></div>';
-    var rest=ag.evs.filter(function(e){return e!==d0;}).slice(0,3);
-    if(rest.length)h+='<div class="hev-list">'+rest.map(function(e){return '<div class="hev"><span class="t">'+esc(e.start)+'</span> '+esc(e.titulo)+'</div>';}).join('')+'</div>';
+    if(d0){
+      h+='<div class="hev-destaque" onclick="go(\'agenda\')"><div class="t">'+esc(d0.start)+'–'+esc(d0.end)+'</div><div class="ti">'+esc(d0.titulo)+'</div><div>'+(d0.projeto?'<span class="chip" style="background:#EEF0FA;color:#3D43A2">'+esc(d0.projeto)+'</span> ':'')+(d0.subtipo?'<span class="chip" style="background:#EEF0FA;color:#5a5f86">'+esc(d0.subtipo)+'</span>':'')+'</div></div>';
+      var rest=ag.todo.filter(function(e){return e!==d0;}).slice(0,3);
+      if(rest.length)h+='<div class="hev-list">'+rest.map(function(e){return '<div class="hev"><span class="t">'+esc(e.start)+'</span> '+esc(e.titulo)+'</div>';}).join('')+'</div>';
+    }else h+='<div class="hempty">Tudo resolvido por hoje ✓</div>';
     var done=0,miss=0,pend=0;ag.evs.forEach(function(e){if(e.status==='done')done++;else if(e.status==='miss')miss++;else pend++;});
     h+='<div class="hstatus"><span class="hs done">✓ '+done+' feito'+(done===1?'':'s')+'</span><span class="hs pend">○ '+pend+' pendente'+(pend===1?'':'s')+'</span>'+(miss?'<span class="hs miss">✗ '+miss+' não feito'+(miss>1?'s':'')+'</span>':'')+'</div>';
     h+='<div class="hfoot">'+ag.evs.length+' evento'+(ag.evs.length>1?'s':'')+(ag.wh?' · <b>'+fmtH(ag.wh)+'h</b> de trabalho':'')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
