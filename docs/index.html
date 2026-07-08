@@ -342,6 +342,22 @@ a{color:inherit}
 .seldon-banner .sb-a{font-style:normal;font-size:12px;color:var(--goldL);margin-top:6px;font-family:var(--sans);letter-spacing:.04em}
 .bq{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 18px;font-size:13.5px;font-style:italic;color:#333;box-shadow:var(--sh)}
 .bq .bq-a{font-style:normal;color:var(--muted);font-size:12px;margin-left:8px}
+/* ===== O Cruzamento (Saúde × Mercado) — peça-assinatura de domingo ===== */
+.cruzamento{background:linear-gradient(135deg,var(--ind0),#1a4d4d);color:#EDEFFA;border:0;border-left:4px solid var(--gold);margin-bottom:16px}
+.cruzamento .cz-h{font-family:var(--serif);font-weight:700;font-size:19px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px;color:#fff}
+.cz-sub{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--goldL)}
+.cruzamento .cz-item{padding:11px 0;border-top:1px solid rgba(255,255,255,.13)}
+.cruzamento .cz-item:first-of-type{border-top:0}
+.cruzamento .cz-item h4{color:#fff;font-size:15.5px;margin-bottom:4px}
+.cruzamento .cz-item p{color:#d8dbf0;font-size:13.5px;margin-bottom:6px;line-height:1.55}
+.cruzamento .cz-why{background:rgba(229,169,60,.15);border-left:3px solid var(--gold);border-radius:4px;padding:6px 11px;font-size:13px;color:#EDEFFA;margin-bottom:5px}
+.cruzamento .cz-why b{color:var(--goldL)}
+.cruzamento .src{color:#aab0e0}.cruzamento .src a{color:var(--goldL)}
+.cruz-home{background:linear-gradient(135deg,var(--ind0),#1a4d4d);color:#EDEFFA;border-left:4px solid var(--gold)}
+.cruz-home h3,.cruz-home h4{color:#fff}
+.cruz-home p{color:#d8dbf0}
+.cruz-home .hfoot{border-top-color:rgba(255,255,255,.15);color:#cfd3ee}
+.cruz-home .btn{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.22)}
 @media (max-width:960px){.home-grid{grid-template-columns:1fr}}
 
 /* ===== Leitura por voz (TTS) — botão ativo ===== */
@@ -818,6 +834,10 @@ function didLeituraHTML(L){if(!L)return '';return '<div class="leitura"><div cla
 function didTickerHTML(arr,cls,lab){if(!arr||!arr.length)return '';return '<div class="ticker'+(cls?' '+cls:'')+'">'+(lab?'<div class="tk tk-lab">'+esc(lab)+'</div>':'')+arr.map(function(t){return '<div class="tk"><span class="s">'+esc(t.s)+'</span><span class="v">'+esc(t.v)+(t.d?' <span class="'+t.d+'">'+(t.d==='up'?'▲':'▼')+'</span>':'')+'</span></div>';}).join('')+'</div>';}
 /** Card-ponte de saúde no DID → abre a view MIR Health. */
 function didTeaserHTML(t){if(!t)return '';var items=(t.itens||[]).map(function(it){var f=it.fonte?('<div class="src">Fonte: <a href="'+(it.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(it.fonte.nome||'')+'</a></div>'):'';return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+f+'</div>';}).join('');return '<div class="card did-teaser"><h3>'+esc(t.titulo||'🩺 Saúde hoje → MIR Health')+'</h3>'+items+'<button class="btn btn-primary" onclick="setView(\'mir\')">'+esc(t.cta||'Abrir MIR Health')+' →</button></div>';}
+/** Seção-assinatura "O Cruzamento" (Saúde × Mercado) — só existe na edição de domingo (d.cruzamento). */
+function didCruzamentoHTML(cz){if(!cz||!cz.length)return '';
+  return '<div class="card cruzamento"><div class="cz-h">🔀 O Cruzamento<span class="cz-sub">Saúde × Mercado</span></div>'+
+    cz.map(function(it){return '<div class="cz-item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="cz-why"><b>A leitura:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}
 function renderDID(){
   if(!didLoaded){didLoaded=true;
     api('listDIDs').then(function(l){edDates.did=l||[];if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;if(edDates.did.length)renderDID();}).catch(function(){});
@@ -826,6 +846,7 @@ function renderDID(){
   var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button>'+ttsBtnsHTML('did')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="didDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="didPrint()">🖨️ Exportar PDF</button></div>';
   h+='<div class="did-mast"><div class="big">DID</div><div class="tl">'+(d.subtitulo||'Jornal pessoal de inteligência de mercado')+'</div>'+
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
+  h+=didCruzamentoHTML(d.cruzamento);   // seção-assinatura (domingo): Saúde × Mercado
   if(d.abas&&d.abas.length){
     if(!d.abas.some(function(a){return a.id===didTab;}))didTab=d.abas[0].id;
     if(d.abas.length>1)h+='<div class="did-tabs">'+d.abas.map(function(a){return '<button class="'+(a.id===didTab?'active':'')+'" onclick="didSetTab(\''+a.id+'\')">'+esc(a.nome)+'</button>';}).join('')+'</div>';   // 1 aba (só mercados) → sem switcher
@@ -970,7 +991,7 @@ function livroPicked(i){var p=_livroPick;closeModal();if(p&&p.cb)p.cb(p.list[i])
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
  * quotes do dia vêm do feed diário home-AAAA-MM-DD.json (rotina das 6h). Sem o feed,
  * os cards degradam bem e as quotes caem na rotação local (determinística por dia). */
-var HOME=null, homeLoaded=false, homeMirTry=false;
+var HOME=null, homeLoaded=false, homeMirTry=false, homeDidTry=false;
 function homeTxt(s){return String(s==null?'':s).replace(/<span class="pj"[^>]*>[\s\S]*?<\/span>/gi,'').replace(/<[^>]+>/g,'').replace(/\*+/g,'').replace(/\s+/g,' ').trim();}
 function mirHomeHi(d){if(!d)return '';var pool=(d.resumo_executivo&&d.resumo_executivo.length)?d.resumo_executivo:[];if(pool.length)return homeTxt(pool[new Date().getHours()%pool.length]);/*rotação por hora → fixa na memória*/var ab=(d.abas||[])[0];var it=ab&&ab.itens&&ab.itens[0];return it?homeTxt(it.titulo+'. '+(it.resumo||'')):'';}
 function homeAmanhaHTML(a){var h='<div class="home-amanha"><div class="ha-h">📅 Amanhã'+(a.clima?' · <span class="ha-wx">'+esc(a.clima)+'</span>':'')+'</div><div class="ha-sub">'+(a.n||0)+' evento'+((a.n||0)===1?'':'s')+(a.reunioes?' · '+a.reunioes+' reuni'+(a.reunioes>1?'ões':'ão'):'')+'</div>';if(a.itens&&a.itens.length)h+='<div class="ha-list">'+a.itens.map(function(e){return '<div class="ha-ev"><span class="t">'+esc(e.h)+'</span> '+esc(e.t)+(e.reuniao?' <span class="ha-tag">reunião</span>':'')+'</div>';}).join('')+'</div>';return h+'</div>';}
@@ -1018,6 +1039,7 @@ function homeRefresh(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();toast('A
 function renderHome(){
   if(!homeLoaded){homeLoaded=true;api('getHome').then(function(x){if(x){HOME=x;if(page==='home')renderHome();}}).catch(function(){});}
   if(!MIR&&!homeMirTry){homeMirTry=true;api('getMIR').then(function(x){if(x){MIR=x;if(page==='home')renderHome();}}).catch(function(){});}
+  if(!DID&&!homeDidTry){homeDidTry=true;api('getDID').then(function(x){if(x){DID=x;if(page==='home')renderHome();}}).catch(function(){});}   // p/ o card do Cruzamento (domingo)
   var hr=new Date().getHours(),sau=hr<12?'Bom dia':(hr<18?'Boa tarde':'Boa noite');
   var w=wxOf(isoOf(TODAY));
   var isToday=(HOME&&HOME.data===isoOf(TODAY));
@@ -1043,6 +1065,11 @@ function renderHome(){
     h+='<div class="hfoot">'+ag.evs.length+' evento'+(ag.evs.length>1?'s':'')+(ag.wh?' · <b>'+fmtH(ag.wh)+'h</b> de trabalho':'')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
   }else h+='<div class="hempty">Sem compromissos hoje 🎉</div><div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'agenda\')">Abrir agenda →</button></div>';
   h+='</div>';
+  /* Cruzamento — seção-assinatura do domingo (só aparece se o DID da semana tiver o campo) */
+  if(DID&&DID.cruzamento&&DID.cruzamento.length){var cz0=DID.cruzamento[0];
+    h+='<div class="card hcard cruz-home"><h3>🔀 O Cruzamento <span class="cz-sub">Saúde × Mercado</span></h3><h4>'+esc(cz0.titulo)+'</h4><p>'+esc(homeTxt(cz0.resumo||''))+'</p>'+
+      '<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'did\')">Ler no DID →</button></div></div>';
+  }
   /* Financeiro — Hoje (reminders do dia) + Próximos (os 2 seguintes) */
   var fuAll=finUpcoming(70);
   var finHoje=fuAll.filter(function(x){return finRelDay(x.date)==='hoje';});
@@ -1203,6 +1230,7 @@ function didExportBodyHTML(d){
   var h='<header><div class="hd-in"><div class="brand">DID<small>'+esc(sub)+'</small></div><div class="hd-meta"><b>'+esc(dl)+'</b><br>'+esc(d.local||'São Paulo')+' · Edição diária</div></div></header>';
   h+=didTkStripHTML(d.ticker);
   h+='<div class="wrap">';
+  if(d.cruzamento&&d.cruzamento.length)h+='<div class="cz-export"><h2 class="sec">🔀 O Cruzamento — Saúde × Mercado</h2>'+d.cruzamento.map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(stripPj(it.resumo||''))+'</p>'+(it.porque?'<div class="why"><b>A leitura:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';
   if(lead&&lead.length)h+='<h2 class="sec">Sumário Executivo</h2><div class="lead"><ul>'+lead.map(function(x){return '<li>'+stripPj(x)+'</li>';}).join('')+'</ul></div>';
   (secoes||[]).forEach(function(s){
     if(/saude/i.test(s.id||''))return;   // saúde não entra como seção — vai só como teaser-ponte
