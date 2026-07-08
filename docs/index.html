@@ -294,6 +294,14 @@ a{color:inherit}
 .hh-per{display:inline-block;font-size:11px;font-weight:700;background:rgba(255,255,255,.18);color:#fff;border-radius:20px;padding:2px 10px;margin-left:10px;vertical-align:middle;letter-spacing:.02em}
 .home-status{background:var(--ind0);color:#EDEFFA;border-left:4px solid var(--gold);border-radius:var(--r);padding:10px 16px;font-size:13px;margin-bottom:14px;line-height:1.5}
 .home-status b{color:#fff}
+.home-amanha{background:#fff;border:1px solid var(--line);border-left:4px solid var(--ind2);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;box-shadow:var(--sh)}
+.home-amanha .ha-h{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink)}
+.home-amanha .ha-wx{font-family:var(--sans);font-weight:600;font-size:12.5px;color:var(--ind2)}
+.home-amanha .ha-sub{font-size:12px;color:var(--muted);margin:2px 0 7px}
+.home-amanha .ha-list{display:flex;flex-direction:column;gap:3px}
+.home-amanha .ha-ev{font-size:13px;color:#333}
+.home-amanha .ha-ev .t{font-weight:700;color:var(--ind2);font-variant-numeric:tabular-nums;margin-right:4px}
+.home-amanha .ha-tag{font-size:9px;font-weight:800;background:#EEF0FA;color:var(--ind2);border-radius:4px;padding:1px 5px;text-transform:uppercase}
 .hstatus{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0}
 .hs{font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px}
 .hs.done{background:#E4F5EC;color:#1F9D57}
@@ -879,7 +887,8 @@ function saveFinItem(id){var v=el('f_val').value.trim();if(!v){toast('Descreva o
  * os cards degradam bem e as quotes caem na rotação local (determinística por dia). */
 var HOME=null, homeLoaded=false, homeMirTry=false;
 function homeTxt(s){return String(s==null?'':s).replace(/<span class="pj"[^>]*>[\s\S]*?<\/span>/gi,'').replace(/<[^>]+>/g,'').replace(/\*+/g,'').replace(/\s+/g,' ').trim();}
-function mirHomeHi(d){if(!d)return '';if(d.resumo_executivo&&d.resumo_executivo.length)return homeTxt(d.resumo_executivo[0]);var ab=(d.abas||[])[0];var it=ab&&ab.itens&&ab.itens[0];return it?homeTxt(it.titulo+'. '+(it.resumo||'')):'';}
+function mirHomeHi(d){if(!d)return '';var pool=(d.resumo_executivo&&d.resumo_executivo.length)?d.resumo_executivo:[];if(pool.length)return homeTxt(pool[new Date().getHours()%pool.length]);/*rotação por hora → fixa na memória*/var ab=(d.abas||[])[0];var it=ab&&ab.itens&&ab.itens[0];return it?homeTxt(it.titulo+'. '+(it.resumo||'')):'';}
+function homeAmanhaHTML(a){var h='<div class="home-amanha"><div class="ha-h">📅 Amanhã'+(a.clima?' · <span class="ha-wx">'+esc(a.clima)+'</span>':'')+'</div><div class="ha-sub">'+(a.n||0)+' evento'+((a.n||0)===1?'':'s')+(a.reunioes?' · '+a.reunioes+' reuni'+(a.reunioes>1?'ões':'ão'):'')+'</div>';if(a.itens&&a.itens.length)h+='<div class="ha-list">'+a.itens.map(function(e){return '<div class="ha-ev"><span class="t">'+esc(e.h)+'</span> '+esc(e.t)+(e.reuniao?' <span class="ha-tag">reunião</span>':'')+'</div>';}).join('')+'</div>';return h+'</div>';}
 var SELDON_QUOTES=[
  'Para ter sucesso, não basta planejar. É preciso saber improvisar.',
  'A queda de um império é uma coisa colossal — e não se combate com lamentos, mas com preparação.',
@@ -922,9 +931,12 @@ function renderHome(){
   var hr=new Date().getHours(),sau=hr<12?'Bom dia':(hr<18?'Boa tarde':'Boa noite');
   var w=wxOf(isoOf(TODAY));
   var isToday=(HOME&&HOME.data===isoOf(TODAY));
-  var perBadge=(isToday&&HOME.periodo)?'<span class="hh-per">'+(HOME.periodo==='noite'?'🌙 noite':'☀️ manhã')+'</span>':'';
+  var perBadge=(isToday&&HOME.periodo)?'<span class="hh-per">'+(HOME.periodo==='noite'?'🌙 noite':(HOME.periodo==='tarde'?'🌤️ tarde':'☀️ manhã'))+'</span>':'';
   var h='<div class="home-hero"><div><div class="hh-sau">'+sau+' 👋'+perBadge+'</div><div class="hh-date">'+dateFull(TODAY)+'</div></div><div class="hh-wx">'+(w?wxToday():'<span style="opacity:.7;font-size:12px">sem previsão ainda</span>')+(WXMETA&&WXMETA.local?'<div class="hh-loc">'+esc(WXMETA.local)+'</div>':'')+'</div></div>';
-  if(isToday&&HOME.periodo==='noite'&&HOME.status)h+='<div class="home-status">🌙 <b>Fechamento do dia:</b> '+esc(HOME.status)+'</div>';
+  if(isToday&&HOME.periodo==='noite'){
+    if(HOME.status)h+='<div class="home-status">🌙 <b>Fechamento do dia:</b> '+esc(HOME.status)+'</div>';
+    if(HOME.amanha)h+=homeAmanhaHTML(HOME.amanha);
+  }
   var stale=(HOME&&HOME.data&&HOME.data!==isoOf(TODAY))?'<span class="hstale">edição de '+HOME.data.split('-').reverse().slice(0,2).join('/')+'</span>':'';
   h+='<div class="home-grid">';
   /* Agenda de hoje */
