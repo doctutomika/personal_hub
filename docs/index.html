@@ -316,6 +316,10 @@ a{color:inherit}
 .hs.miss{background:#FBE9E7;color:#C8462F}
 .hfin-sec{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:9px 0 1px}
 .hfin-sec:first-of-type{margin-top:2px}
+.hbook-list{display:flex;flex-direction:column;gap:8px}
+.hbook-t{font-family:var(--serif);font-weight:700;font-size:14.5px;color:var(--ink)}
+.hbook-m{font-size:12px;color:var(--muted);margin-top:1px}
+.hbook-m b{color:var(--ind2)}
 .hfin-list{display:flex;flex-direction:column;gap:1px}
 .hfin{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px dashed var(--line);font-size:13px}
 .hfin:first-child{border-top:0}
@@ -461,7 +465,7 @@ function saveLocs(){var a=Object.keys(LOCS).filter(function(k){return LOCS[k];})
 function getLoc(iso){return LOCS[iso]||'';}
 function setLoc(iso,v){if(v)LOCS[iso]=v;else delete LOCS[iso];saveLocs();renderAgenda();}
 function locSelect(iso,cur){return '<select class="locsel" title="Local (gerencie em Sistema)" onclick="event.stopPropagation()" onchange="setLoc(\''+iso+'\',this.value)"><option value="">· local</option>'+locOptgroups(cur)+'</select>';}
-function load(){var v=document.getElementById('view');if(v)v.innerHTML='<div style="padding:48px;text-align:center;color:#6B7088">Carregando…</div>';api('getBootstrap').then(function(d){CFG=(d&&d.config)||[];EVENTS=(d&&d.events)||[];LOCS=(d&&d.locations)||{};render();wxLoad();}).catch(function(e){var vv=document.getElementById('view');if(vv)vv.innerHTML='<div class="card">Erro ao carregar: '+((e&&e.message)||e)+'</div>';});}
+function load(){var v=document.getElementById('view');if(v)v.innerHTML='<div style="padding:48px;text-align:center;color:#6B7088">Carregando…</div>';api('getBootstrap').then(function(d){CFG=(d&&d.config)||[];EVENTS=(d&&d.events)||[];LOCS=(d&&d.locations)||{};if(dedupEventIds())saveEv();render();wxLoad();}).catch(function(e){var vv=document.getElementById('view');if(vv)vv.innerHTML='<div class="card">Erro ao carregar: '+((e&&e.message)||e)+'</div>';});}
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&refreshToday()&&page==='agenda')renderAgenda(); });
 function reloadAgenda(){toast('Atualizando…');
   api('pullAgenda').then(function(r){if(r&&r.events)EVENTS=r.events;renderAgenda();
@@ -607,7 +611,7 @@ function noteHTML(raw){
 }
 function goToday(){cur=new Date(TODAY);renderAgenda();window.scrollTo(0,0);}
 function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e)return;e.status=e.status===''?'done':(e.status==='done'?'miss':'');saveEv();
-  if(e.status==='done'&&e.subsub==='Livro')livroOnRead();   // leitura de livro do dia → livro ativo
+  if(e.status==='done'&&e.subsub==='Livro')livroOnRead(durH(e));   // leitura de livro do dia → soma horas no livro ativo
   renderAgenda();}
 
 
@@ -619,7 +623,7 @@ window.addEventListener('afterprint',function(){if(page==='did')renderDID();}); 
 function openEvent(id, prefill){
   var e=id?EVENTS.find(function(x){return x.id===id;}):(prefill||null);
   var isNew=!id;
-  if(!e){e={id:'',date:isoOf(cur),start:'09:00',end:'10:00',titulo:'',subtipo:'Reunião',subsub:'',projeto:'',local:'',note:''};}
+  if(!e){e={id:'',date:isoOf(TODAY),start:'09:00',end:'10:00',titulo:'',subtipo:'Reunião',subsub:'',projeto:'',local:'',note:''};}   /* evento novo já vem com a data de HOJE */
   var tipo=tipoOf(e.subtipo)||'Trabalho';
   var tipoOpts=byCat('tipo').map(function(t){return '<option value="'+t.valor+'"'+(t.valor===tipo?' selected':'')+'>'+t.valor+'</option>';}).join('');
   var projOpts='<option value="">—</option>'+byCat('projeto').map(function(p){return '<option value="'+p.valor+'"'+(p.valor===e.projeto?' selected':'')+'>'+p.valor+'</option>';}).join('');
@@ -659,9 +663,13 @@ function saveEvent(id){
   var o={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim()};
   if(!o.titulo){toast('Dê um título');return;}
   if(!o.date){toast('Escolha a data');return;}   // input de data nativo pode ser limpo → evita evento órfão sem data
-  if(id){var e=EVENTS.find(function(x){return x.id===id;});Object.assign(e,o);e.fonte='user';}else{o.id='evt-'+Date.now();o.status='';o.fonte='user';EVENTS.push(o);}
+  if(id){var e=EVENTS.find(function(x){return x.id===id;});Object.assign(e,o);e.fonte='user';}else{o.id=uniqEvtId();o.status='';o.fonte='user';EVENTS.push(o);}
   saveEv();closeModal();toast('Salvo');renderAgenda();
 }
+/** ID de evento GARANTIDAMENTE único (evita colisão entre duplicados → marcar um marcava o outro). */
+function uniqEvtId(){var id;do{id='evt-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*1e7).toString(36);}while(EVENTS.some(function(e){return e.id===id;}));return id;}
+/** Corrige ids duplicados já existentes nos dados (mantém o 1º, reatribui os demais). Retorna true se mudou. */
+function dedupEventIds(){var seen={},changed=false;EVENTS.forEach(function(e){if(!e.id||seen[e.id]){e.id=uniqEvtId();changed=true;}seen[e.id]=1;});return changed;}
 function delEvent(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e)return;if(!confirm('Cancelar o evento "'+(e.titulo||'')+'"?'))return;EVENTS=EVENTS.filter(function(x){return x.id!==id;});saveEv();closeModal();toast('Evento cancelado');renderAgenda();}
 
 /* ============================ INDICADORES ============================ */
@@ -904,10 +912,10 @@ function saveFinItem(id){var v=el('f_val').value.trim();if(!v){toast('Descreva o
 var LIVRO_ST={espera:'Na lista de espera',lendo:'Em leitura',lido:'Lido'};
 function livros(){return CFG.filter(function(x){return x.cat==='livro';}).sort(function(a,b){return (a.ordem||0)-(b.ordem||0);});}
 function livrosByStatus(s){return livros().filter(function(l){return (l.pai||'espera')===s;});}
-function livroDts(l){var p=String(l.cor||'').split('|');return {ini:p[0]||'',fim:p[1]||''};}
-function livroSetDts(l,ini,fim){l.cor=(ini||'')+'|'+(fim||'');}
+function livroDts(l){var p=String(l.cor||'').split('|');return {ini:p[0]||'',fim:p[1]||'',horas:parseFloat(p[2])||0};}
+function livroSetDts(l,d){l.cor=(d.ini||'')+'|'+(d.fim||'')+'|'+(d.horas||0);}
 function daysBetween(a,b){return Math.max(0,Math.round((parseISO(b)-parseISO(a))/86400000));}
-function livroTempo(l){var d=livroDts(l);if(d.ini&&d.fim)return 'lido em '+(daysBetween(d.ini,d.fim)||1)+' dias';if(d.ini)return 'lendo há '+(daysBetween(d.ini,isoOf(TODAY))||0)+' dias';return '';}
+function livroTempo(l){var d=livroDts(l),parts=[];if(d.ini&&d.fim)parts.push('lido em '+(daysBetween(d.ini,d.fim)||1)+' dias');else if(d.ini)parts.push('lendo há '+(daysBetween(d.ini,isoOf(TODAY))||0)+' dias');if(d.horas)parts.push(fmtH(d.horas)+'h lidas');return parts.join(' · ');}
 function sysLivros(){
   var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Seus livros por status. <b>Em leitura</b> = livro ativo. O <b>tempo de leitura</b> conta os dias de início→fim. Ao marcar a leitura de <b>Livro</b> na agenda, o sistema usa o livro ativo (pergunta se houver mais de um).</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-sm btn-primary" onclick="openLivro(\'\')">＋ Livro</button></div>';
@@ -927,27 +935,30 @@ function livroApplyStatus(l,st){var d=livroDts(l);
   if(st==='lendo'&&!d.ini)d.ini=isoOf(TODAY);
   if(st==='lido'){if(!d.ini)d.ini=isoOf(TODAY);d.fim=isoOf(TODAY);}
   if(st==='espera'){d.ini='';d.fim='';}
-  livroSetDts(l,d.ini,d.fim);l.pai=st;}
+  livroSetDts(l,d);l.pai=st;}   /* preserva horas */
 function livroStatus(id,st){var l=cfgById(id);if(!l)return;livroApplyStatus(l,st);saveCfg();toast(esc(l.valor)+': '+LIVRO_ST[st]);renderSys();}
 function openLivro(id){var c=id?cfgById(id):{valor:'',pai:'espera'};
   openModal('<div class="modal-head"><h3>'+(id?'Editar ':'Novo ')+'livro</h3><button class="x" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body"><div class="field"><label>Título</label><input id="lv_val" value="'+esc(c.valor)+'" placeholder="ex.: Lifespan — David Sinclair"></div>'+
-    '<div class="field"><label>Status</label><select id="lv_st"><option value="espera"'+((c.pai||'espera')==='espera'?' selected':'')+'>Na lista de espera</option><option value="lendo"'+(c.pai==='lendo'?' selected':'')+'>Em leitura (ativo)</option><option value="lido"'+(c.pai==='lido'?' selected':'')+'>Lido</option></select></div></div>'+
+    '<div class="grid2"><div class="field"><label>Status</label><select id="lv_st"><option value="espera"'+((c.pai||'espera')==='espera'?' selected':'')+'>Na lista de espera</option><option value="lendo"'+(c.pai==='lendo'?' selected':'')+'>Em leitura (ativo)</option><option value="lido"'+(c.pai==='lido'?' selected':'')+'>Lido</option></select></div>'+
+    '<div class="field"><label>Horas lidas</label><input id="lv_hrs" type="number" step="0.5" min="0" value="'+livroDts(c).horas+'"></div></div></div>'+
     '<div class="modal-foot"><div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveLivroItem(\''+(id||'')+'\')">Salvar</button></div></div>');
 }
 function saveLivroItem(id){var v=el('lv_val').value.trim();if(!v){toast('Dê um título');return;}var st=el('lv_st').value;
   var l=id?cfgById(id):{id:'livro-'+Date.now(),cat:'livro',valor:'',cor:'',ordem:livros().length+1,pai:'espera',gov:'usuario'};
   l.valor=v;livroApplyStatus(l,st);
+  var d=livroDts(l);d.horas=Math.max(0,parseFloat(el('lv_hrs').value)||0);livroSetDts(l,d);
   if(!id)CFG.push(l);
   saveCfg();closeModal();toast('Salvo');renderSys();}
-/** Chamado ao marcar um evento Leitura→Livro como feito: usa o livro ativo; escolhe se houver 0 ou >1. */
-function livroOnRead(){var at=livrosByStatus('lendo');
-  if(at.length===1){toast('📖 Leitura registrada: '+at[0].valor);return;}
-  if(at.length>1){livroPick(at,'Qual livro você leu?',function(l){toast('📖 Leitura: '+l.valor);});return;}
+/** Ao marcar um evento Leitura→Livro como feito: soma as horas do evento ao livro ativo (escolhe se houver 0 ou >1). */
+function livroOnRead(dur){dur=dur||0;var at=livrosByStatus('lendo');
+  if(at.length===1)return livroLogRead(at[0],dur);
+  if(at.length>1)return livroPick(at,'Qual livro você leu?',function(l){livroLogRead(l,dur);});
   var wait=livrosByStatus('espera');
   if(!wait.length){toast('Sem livro ativo — cadastre em Sistema → Livros');return;}
-  livroPick(wait,'Qual livro você começou a ler?',function(l){livroStatus(l.id,'lendo');});
+  livroPick(wait,'Qual livro você começou a ler?',function(l){livroApplyStatus(l,'lendo');livroLogRead(l,dur);});
 }
+function livroLogRead(l,dur){var d=livroDts(l);d.horas=(d.horas||0)+(dur||0);livroSetDts(l,d);saveCfg();toast('📖 '+l.valor+(dur?' · +'+fmtH(dur)+'h':''));if(page==='sys')renderSys();else if(page==='home')renderHome();}
 var _livroPick=null;
 function livroPick(list,title,cb){_livroPick={list:list,cb:cb};
   openModal('<div class="modal-head"><h3>'+esc(title)+'</h3><button class="x" onclick="closeModal()">×</button></div><div class="modal-body">'+list.map(function(l,i){return '<button class="btn" style="width:100%;margin-bottom:6px;justify-content:flex-start" onclick="livroPicked('+i+')">📕 '+esc(l.valor)+'</button>';}).join('')+'</div>');}
@@ -1041,6 +1052,12 @@ function renderHome(){
   h+='<div class="hfin-sec">Próximos</div>';
   h+=finProx.length?('<div class="hfin-list">'+finProx.map(function(x){return finRow(x,false,true);}).join('')+'</div>'):'<div class="hempty" style="padding:3px 0">Nada à vista</div>';
   h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="sysTab=\'fin\';go(\'sys\')">Gerenciar →</button></div></div>';
+  /* Livro ativo — só aparece se houver livro "Em leitura" */
+  var livAtivos=(typeof livrosByStatus==='function')?livrosByStatus('lendo'):[];
+  if(livAtivos.length){
+    h+='<div class="card hcard"><h3>📖 Lendo agora</h3><div class="hbook-list">'+livAtivos.map(function(l){var d=livroDts(l);var dias=d.ini?daysBetween(d.ini,isoOf(TODAY)):0;return '<div class="hbook"><div class="hbook-t">'+esc(l.valor)+'</div><div class="hbook-m">'+(d.horas?'<b>'+fmtH(d.horas)+'h</b> lidas':'0h lidas')+(d.ini?' · há '+dias+' dia'+(dias===1?'':'s'):'')+'</div></div>';}).join('')+'</div>';
+    h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="sysTab=\'livro\';go(\'sys\')">Livros →</button></div></div>';
+  }
   /* Mercado */
   h+='<div class="card hcard"><h3>📈 Mercado'+(stale?' '+stale:'')+'</h3>';
   if(HOME&&HOME.mercado){var mk=HOME.mercado;h+='<h4>'+esc(mk.titulo||'')+'</h4><p>'+esc(mk.resumo||'')+'</p>'+(mk.fonte?'<div class="src">Fonte: <a href="'+(mk.fonte.url||'#')+'" target="_blank" rel="noopener">'+esc(mk.fonte.nome||'')+'</a></div>':'');}
