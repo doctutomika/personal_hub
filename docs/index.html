@@ -559,7 +559,7 @@ function renderDay(){
   var d=new Date(cur), iso=isoOf(d), evs=eventsOf(iso), w=0,p=0;
   evs.forEach(function(e){if(isWork(e))w+=durH(e);else p+=durH(e);});
   var label=DOW[(d.getDay()+6)%7]+', '+pad(d.getDate())+' '+MON[d.getMonth()]+' '+d.getFullYear();
-  var h=agHeader(label,(w?'<b>'+fmtH(w)+'h</b> trab':'')+(p?((w?' · ':'')+fmtH(p)+'h pess'):''))+wxBarHTML();
+  var h=agHeader(label,(w?'<b>'+fmtH(w)+'h</b> trab':'')+(p?((w?' · ':'')+fmtH(p)+'h pess'):'')+((w||p)&&evs.length?' · ':'')+(evs.length?evs.length+' evento'+(evs.length>1?'s':''):''))+wxBarHTML();
   h+='<div class="dayview"><div class="day">'+dayHeadHTML(d,iso)+'<div class="dayview-body">';
   if(!evs.length)h+='<div class="empty-day">Sem compromissos</div>';
   evs.forEach(function(e){h+=evCard(e);});
