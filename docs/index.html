@@ -1041,12 +1041,20 @@ function openSerie(id){var c=id?cfgById(id):{valor:'',pai:'ativa',cor:''};var d=
   openModal('<div class="modal-head"><h3>'+(id?'Editar ':'Nova ')+'série</h3><button class="x" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body"><div class="field"><label>Nome da série</label><input id="sr_val" value="'+esc(c.valor)+'" placeholder="ex.: Treino ABC — hipertrofia"></div>'+
     '<div class="grid2"><div class="field"><label>Status</label><select id="sr_st"><option value="ativa"'+((c.pai||'ativa')==='ativa'?' selected':'')+'>Ativa (atual)</option><option value="encerrada"'+(c.pai==='encerrada'?' selected':'')+'>Encerrada</option></select></div>'+
-    '<div class="field"><label>Meta (semanas)</label><input id="sr_meta" type="number" min="1" max="52" value="'+d.meta+'"></div></div></div>'+
+    '<div class="field"><label>Meta (semanas)</label><input id="sr_meta" type="number" min="1" max="52" value="'+d.meta+'"></div></div>'+
+    '<div class="grid2"><div class="field"><label>Início</label><input id="sr_ini" type="date" value="'+(d.ini||isoOf(TODAY))+'"></div>'+
+    '<div class="field"><label>Fim (se encerrada)</label><input id="sr_fim" type="date" value="'+esc(d.fim)+'"></div></div>'+
+    '<div class="muted" style="font-size:11px;margin-top:2px">A meta conta a partir do <b>Início</b>. Deixe o Fim vazio enquanto estiver ativa.</div></div>'+
     '<div class="modal-foot"><div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveSerieItem(\''+(id||'')+'\')">Salvar</button></div></div>');
 }
 function saveSerieItem(id){var v=el('sr_val').value.trim();if(!v){toast('Dê um nome');return;}var st=el('sr_st').value;
   var l=id?cfgById(id):{id:'serie-'+Date.now(),cat:'serie',valor:'',cor:'',ordem:series().length+1,pai:'ativa',gov:'usuario'};
-  l.valor=v;serieApply(l,st);var d=serieDts(l);d.meta=Math.max(1,Math.min(52,parseInt(el('sr_meta').value)||8));serieSetDts(l,d);
+  l.valor=v;l.pai=st;var d=serieDts(l);
+  d.meta=Math.max(1,Math.min(52,parseInt(el('sr_meta').value)||8));
+  d.ini=el('sr_ini').value||d.ini||isoOf(TODAY);
+  d.fim=el('sr_fim').value||'';
+  if(st==='encerrada'&&!d.fim)d.fim=isoOf(TODAY);
+  serieSetDts(l,d);
   if(!id)CFG.push(l);saveCfg();closeModal();toast('Salvo');renderSys();}
 
 /* ============================ HOME (Início) ============================
