@@ -605,7 +605,7 @@ function evCard(e){
   var chips='';
   if(e.projeto){var p=cfgFind('projeto',e.projeto);chips+='<span class="chip" style="background:'+hex2bg(p?p.cor:col)+';color:'+(p?p.cor:col)+'"><span class="dot" style="background:'+(p?p.cor:col)+'"></span>'+e.projeto+'</span>';}
   if(e.subtipo)chips+='<span class="chip" style="background:#EEF0FA;color:#5a5f86">'+e.subtipo+'</span>';
-  if(e.subsub)chips+='<span class="chip" style="background:#F4EFE3;color:#7a5300">'+esc(e.subsub)+((e.subsub==='Livro'&&e.livro)?': '+esc(e.livro):'')+'</span>';
+  if(e.subsub)chips+='<span class="chip" style="background:#F4EFE3;color:#7a5300">'+esc(e.subsub)+(e.detalhe?': '+esc(e.detalhe):'')+'</span>';
   var tlabel=e.start+'–'+e.end;
   return '<div class="ev '+cls+'" style="border-left-color:'+col+'" onclick="openEvent(\''+e.id+'\')">'+
     '<div class="ev-actions"><span class="st '+cls+'" title="feito/não/—" onclick="event.stopPropagation();cycleStatus(\''+e.id+'\')">'+sym+'</span><button class="ev-del" title="Cancelar evento" onclick="event.stopPropagation();delEvent(\''+e.id+'\')">×</button></div>'+
@@ -652,37 +652,42 @@ function openEvent(id, prefill){
       '<div class="field"><label>Fim</label><input id="m_end" type="time" step="900" value="'+e.end+'"></div></div>'+
     '<div class="grid2"><div class="field"><label>Tipo</label><select id="m_tipo" onchange="fillSub()">'+tipoOpts+'</select></div>'+
       '<div class="field"><label>Subtipo</label><select id="m_sub" onchange="fillSubsub()"></select></div></div>'+
-    '<div class="field" id="m_subsub_wrap" style="display:none"><label id="m_subsub_lbl">Detalhe</label><select id="m_subsub" onchange="fillLivro()"></select></div>'+
-    '<div class="field" id="m_livro_wrap" style="display:none"><label>Qual livro (para contabilizar a leitura)</label><select id="m_livro"></select></div>'+
+    '<div class="field" id="m_subsub_wrap" style="display:none"><label id="m_subsub_lbl">Detalhe</label><select id="m_subsub" onchange="fillDetalhe()"></select></div>'+
+    '<div class="field" id="m_detalhe_wrap" style="display:none"><label id="m_detalhe_lbl">Detalhe</label><select id="m_detalhe"></select></div>'+
     '<div class="field"><label>Projeto / Empresa</label><select id="m_proj">'+projOpts+'</select></div>'+
     '<div class="field"><label>Nota (opcional)</label><textarea id="m_note" rows="2" placeholder="Observação — link: [texto curto](https://… ou file:///…)">'+esc(e.note)+'</textarea><div class="hint">Dica: <code>[Minutas NSP](https://…)</code> mostra só o texto e abre o link.</div></div>'+
     '<div class="muted" id="m_calc" style="font-size:12px"></div>'+
     '</div>'+
     '<div class="modal-foot"><div style="display:flex;gap:8px">'+(isNew?'':'<button class="btn btn-sm btn-ghost" onclick="dupEvent()">⧉ Duplicar</button><button class="btn btn-sm btn-ghost" style="color:var(--miss)" onclick="delEvent(\''+e.id+'\')">Excluir</button>')+'</div>'+
     '<div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveEvent(\''+(e.id||'')+'\')">Salvar</button></div></div>');
-  fillSub(e.subtipo); fillSubsub(e.subsub); fillLivro(e.livro);
+  fillSub(e.subtipo); fillSubsub(e.subsub); fillDetalhe(e.detalhe);
   el('m_start').addEventListener('change',autoEnd);   // ao mudar o início, fim vai p/ +1h automaticamente
   ['m_end','m_tipo'].forEach(function(idd){el(idd).addEventListener('change',calcDur);});calcDur();
 }
 /** Ao escolher a hora de início, joga o fim para 1h depois (padrão 1h). */
 function autoEnd(){var a=toMin(el('m_start').value);var b=(a+60)%1440;el('m_end').value=pad(Math.floor(b/60))+':'+pad(b%60);calcDur();}
 /** Duplica o evento aberto: abre um NOVO com os mesmos dados (ajuste a data/hora e salve → vira outro). */
-function dupEvent(){var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;var pf={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim(),livro:(ss==='Livro'&&el('m_livro'))?el('m_livro').value:''};openEvent(null,pf);toast('Duplicado — ajuste data/hora e salve');}
+function dupEvent(){var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;var pf={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim(),detalhe:(el('m_detalhe_wrap')&&el('m_detalhe_wrap').style.display!=='none'&&el('m_detalhe'))?el('m_detalhe').value:''};openEvent(null,pf);toast('Duplicado — ajuste data/hora e salve');}
 function fillSub(sel){var tipo=el('m_tipo').value;var subs=subtiposOf(tipo);el('m_sub').innerHTML=subs.map(function(s){return '<option value="'+s.valor+'"'+(s.valor===sel?' selected':'')+'>'+s.valor+'</option>';}).join('');}
 function fillSubsub(sel){var tipo=el('m_tipo').value,sub=el('m_sub').value;var nn=subsubOf(tipo,sub);var w=el('m_subsub_wrap');
-  if(!nn.length){w.style.display='none';el('m_subsub').innerHTML='';fillLivro();return;}
+  if(!nn.length){w.style.display='none';el('m_subsub').innerHTML='';fillDetalhe();return;}
   w.style.display='';el('m_subsub_lbl').textContent=(sub==='Leitura'?'O que está lendo / estudando':'Detalhe ('+sub+')');
-  el('m_subsub').innerHTML='<option value="">—</option>'+nn.map(function(x){return '<option value="'+x.valor+'"'+(x.valor===sel?' selected':'')+'>'+x.valor+'</option>';}).join('');fillLivro();}
-/** Seletor de livro: só aparece quando o detalhe da leitura é "Livro". Ativos (lendo) primeiro. */
-function fillLivro(sel){var w=el('m_livro_wrap');if(!w)return;var isBook=(el('m_subsub')&&el('m_subsub').value==='Livro');
-  if(!isBook){w.style.display='none';return;}
-  w.style.display='';var cur=(sel!==undefined&&sel!==null)?sel:(el('m_livro')?el('m_livro').value:'');
-  var ord={lendo:0,espera:1,lido:2},opts=livros().slice().sort(function(a,b){return (ord[a.pai||'espera']||1)-(ord[b.pai||'espera']||1);});
-  el('m_livro').innerHTML='<option value="">— escolher —</option>'+opts.map(function(l){var st=(l.pai==='lendo'?' · lendo':(l.pai==='lido'?' · lido':' · espera'));return '<option value="'+esc(l.valor)+'"'+(l.valor===cur?' selected':'')+'>'+esc(l.valor)+st+'</option>';}).join('');}
+  el('m_subsub').innerHTML='<option value="">—</option>'+nn.map(function(x){return '<option value="'+x.valor+'"'+(x.valor===sel?' selected':'')+'>'+x.valor+'</option>';}).join('');fillDetalhe();}
+/** 4º nível "detalhe" — opções dependem do subsub: Livro→livros, Academia→séries, BJJ→Gi/No Gi. */
+var DETALHE_OF={
+  'Livro':{label:'Qual livro (para contabilizar a leitura)',opts:function(){var o={lendo:0,espera:1,lido:2};return livros().slice().sort(function(a,b){return (o[a.pai||'espera']||1)-(o[b.pai||'espera']||1);}).map(function(l){return {v:l.valor,t:l.valor+(l.pai==='lendo'?' · lendo':(l.pai==='lido'?' · lido':' · espera'))};});}},
+  'Academia':{label:'Qual série',opts:function(){var o={ativa:0,encerrada:1};return series().slice().sort(function(a,b){return (o[a.pai||'ativa']||0)-(o[b.pai||'ativa']||0);}).map(function(l){return {v:l.valor,t:l.valor+(l.pai==='encerrada'?' · encerrada':' · ativa')};});}},
+  'BJJ':{label:'Modalidade',opts:function(){return [{v:'Gi',t:'🥋 Gi'},{v:'No Gi',t:'No Gi'}];}}
+};
+function fillDetalhe(sel){var w=el('m_detalhe_wrap');if(!w)return;var ss=el('m_subsub')?el('m_subsub').value:'';var cfg=DETALHE_OF[ss];
+  if(!cfg){w.style.display='none';return;}
+  w.style.display='';el('m_detalhe_lbl').textContent=cfg.label;
+  var cur=(sel!==undefined&&sel!==null)?sel:(el('m_detalhe')?el('m_detalhe').value:'');
+  el('m_detalhe').innerHTML='<option value="">— escolher —</option>'+cfg.opts().map(function(o){return '<option value="'+esc(o.v)+'"'+(o.v===cur?' selected':'')+'>'+esc(o.t)+'</option>';}).join('');}
 function calcDur(){var a=toMin(el('m_start').value),b=toMin(el('m_end').value);if(b<=a)b+=1440;var h=(b-a)/60;var work=el('m_tipo').value==='Trabalho';el('m_calc').innerHTML='Duração: <b>'+fmtH(h)+'h</b>'+(work?' · conta como trabalho':' · pessoal');}
 function saveEvent(id){
   var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;
-  var o={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim(),livro:(ss==='Livro'&&el('m_livro'))?el('m_livro').value:''};
+  var o={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim(),detalhe:(el('m_detalhe_wrap')&&el('m_detalhe_wrap').style.display!=='none'&&el('m_detalhe'))?el('m_detalhe').value:''};
   if(!o.titulo){toast('Dê um título');return;}
   if(!o.date){toast('Escolha a data');return;}   // input de data nativo pode ser limpo → evita evento órfão sem data
   if(id){var e=EVENTS.find(function(x){return x.id===id;});Object.assign(e,o);e.fonte='user';}else{o.id=uniqEvtId();o.status='';o.fonte='user';EVENTS.push(o);}
@@ -719,33 +724,53 @@ function indNav(n){
   else if(indPeriod==='ano')indRef.setFullYear(indRef.getFullYear()+n);
   indRef=new Date(indRef);renderInd();}
 function indToday(){indRef=new Date(TODAY);renderInd();}
+var indTab='geral';
 function renderInd(){
   var evs=EVENTS.filter(function(e){return inRange(e.date);});
-  var workH=0,persH=0,done=0,plan=0,byProj={},bySub={},byObj={},byBook={};
-  evs.forEach(function(e){var h=durH(e);if(isWork(e))workH+=h;else persH+=h;plan++;if(e.status==='done')done++;
+  var workH=0,persH=0,done=0,plan=0,byProj={},bySub={},byBook={};
+  var focoH=0,reuniaoH=0,estudoH=0,atendN=0,diasTrab={},byModalN={},byGi={},saudeH=0,familiaH=0;
+  evs.forEach(function(e){var h=durH(e),w=isWork(e),dn=e.status==='done';
+    if(w)workH+=h;else persH+=h;plan++;if(dn)done++;
     if(e.projeto)byProj[e.projeto]=(byProj[e.projeto]||0)+h;
     bySub[e.subtipo]=(bySub[e.subtipo]||0)+h;
-    if(e.subsub)byObj[e.subsub]=(byObj[e.subsub]||0)+h;
-    if(e.subsub==='Livro'&&e.status==='done'&&e.livro)byBook[e.livro]=(byBook[e.livro]||0)+h;});   // leitura FEITA por livro
+    if(e.subsub==='Livro'&&dn&&e.detalhe)byBook[e.detalhe]=(byBook[e.detalhe]||0)+h;
+    if(e.subtipo==='Foco')focoH+=h;else if(e.subtipo==='Reunião')reuniaoH+=h;else if(e.subtipo==='Estudo')estudoH+=h;else if(e.subtipo==='Atendimento'&&dn)atendN++;
+    if(w&&dn)diasTrab[e.date]=(diasTrab[e.date]||0)+h;
+    if(e.subtipo==='Treino'||e.subtipo==='Esporte'){var k=e.subsub||e.subtipo;if(dn)byModalN[k]=(byModalN[k]||0)+1;if(e.subsub==='BJJ'&&dn&&e.detalhe)byGi[e.detalhe]=(byGi[e.detalhe]||0)+1;}
+    else if(e.subtipo==='Saúde')saudeH+=h;else if(e.subtipo==='Família')familiaH+=h;});
   var ader=plan?Math.round(done/plan*100):0;
+  var metaDias=Object.keys(diasTrab).filter(function(d){return diasTrab[d]>=6;}).length;
+  var deepPct=(focoH+reuniaoH)?Math.round(focoH/(focoH+reuniaoH)*100):0;
+  var treinoN=Object.keys(byModalN).reduce(function(s,k){return s+byModalN[k];},0);
+  var livrosLidos=livrosByStatus('lido').filter(function(l){var d=livroDts(l);return d.fim&&inRange(d.fim);}).length;
+  function K(n,l,c){return '<div class="kpi'+(c?' '+c:'')+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>';}
   var h='<div class="page-head"><h1>Indicadores</h1><div class="spacer"></div><div class="seg">'+
     [['dia','Dia'],['semana','Semana'],['mes','Mês'],['ano','Ano'],['alltime','Tudo']].map(function(p){return '<button class="'+(indPeriod===p[0]?'active':'')+'" onclick="indPeriod=\''+p[0]+'\';renderInd()">'+p[1]+'</button>';}).join('')+'</div></div>';
   h+='<div class="agenda-bar">'+(indPeriod==='alltime'?'<div class="wknav"><span class="lbl">Tudo</span></div>':'<div class="wknav"><button class="icbtn" onclick="indNav(-1)">◀</button><span class="lbl">'+indLabel()+'</span><button class="icbtn" onclick="indNav(1)">▶</button><button class="btn btn-sm" onclick="indToday()">Hoje</button></div>')+'</div>';
-  h+='<div class="kpis"><div class="kpi"><div class="n">'+fmtH(workH)+'h</div><div class="l">Horas de trabalho</div></div>'+
-    '<div class="kpi gold"><div class="n">'+fmtH(persH)+'h</div><div class="l">Horas pessoais</div></div>'+
-    '<div class="kpi ok"><div class="n">'+ader+'%</div><div class="l">Aderência</div></div>'+
-    '<div class="kpi"><div class="n">'+plan+'</div><div class="l">Eventos</div></div></div>';
-  h+='<div class="indcols"><div class="card"><div class="grp-h">Horas por projeto</div>'+bars(byProj,'projeto')+'</div>'+
-    '<div class="card"><div class="grp-h">Horas por subtipo</div>'+bars(bySub,'subtipo')+'</div></div>';
-  if(Object.keys(byObj).length)h+='<div class="card" style="margin-top:14px"><div class="grp-h">Leitura / estudo — por objeto</div>'+bars(byObj,'subsub')+'</div>';
-  if(Object.keys(byBook).length)h+='<div class="card" style="margin-top:14px"><div class="grp-h">📖 Leitura por livro — horas FEITAS no período</div>'+bars(byBook,'_book')+'</div>';
+  h+='<div class="sys-tabs">'+[['geral','🏠 Geral'],['trabalho','💼 Trabalho'],['pessoal','🌱 Pessoal']].map(function(t){return '<button class="sys-tab'+(indTab===t[0]?' active':'')+'" onclick="indTab=\''+t[0]+'\';renderInd()">'+t[1]+'</button>';}).join('')+'</div>';
+  if(indTab==='trabalho'){
+    h+='<div class="kpis">'+K(fmtH(workH)+'h','Horas de trabalho')+K(deepPct+'%','Deep work (foco)','ok')+K(fmtH(estudoH)+'h','Estudo','gold')+K(metaDias,'Dias ≥6h')+'</div>';
+    h+='<div class="indcols"><div class="card"><div class="grp-h">Horas por projeto</div>'+bars(byProj,'projeto')+'</div><div class="card"><div class="grp-h">Horas por subtipo</div>'+bars(bySub,'subtipo')+'</div></div>';
+    h+='<div class="card" style="margin-top:14px"><div class="grp-h">🧠 Deep work — Foco × Reunião</div>'+bars({'Foco':focoH,'Reunião':reuniaoH},'subtipo')+'</div>';
+  } else if(indTab==='pessoal'){
+    h+='<div class="kpis">'+K(fmtH(persH)+'h','Horas pessoais','gold')+K(treinoN,'Treinos (sessões)')+K(livrosLidos,'Livros lidos','ok')+K(fmtH(saudeH+familiaH)+'h','Saúde+Família')+'</div>';
+    h+='<div class="indcols"><div class="card"><div class="grp-h">🏋️ Treino — sessões por modalidade</div>'+bars(byModalN,'subsub','x')+'</div>'+(Object.keys(byGi).length?'<div class="card"><div class="grp-h">🥋 BJJ — Gi × No Gi (sessões)</div>'+bars(byGi,'_gi','x')+'</div>':'')+'</div>';
+    if(series().length)h+='<div class="card" style="margin-top:14px"><div class="grp-h">🔥 Séries de treino</div>'+series().map(function(s){var d=serieDts(s),sem=serieSemanas(s),ses=serieSessoes(s.valor),al=(s.pai==='ativa'&&sem>=d.meta)?' · ⚠️ trocar':'';return '<div class="hfin"><span class="hfin-t">'+esc(s.valor)+(s.pai==='ativa'?' <span class="hfin-tag">ativa</span>':'')+'</span><span class="hfin-r">'+ses+'x · '+sem+'/'+d.meta+' sem'+al+'</span></div>';}).join('')+'</div>';
+    if(Object.keys(byBook).length)h+='<div class="card" style="margin-top:14px"><div class="grp-h">📖 Leitura por livro — horas feitas</div>'+bars(byBook,'_book')+'</div>';
+  } else {
+    h+='<div class="kpis">'+K(fmtH(workH)+'h','Horas de trabalho')+K(fmtH(persH)+'h','Horas pessoais','gold')+K(ader+'%','Aderência','ok')+K(plan,'Eventos')+'</div>';
+    var tot=workH+persH,wp=tot?Math.round(workH/tot*100):0;
+    h+='<div class="card"><div class="grp-h">⚖️ Balanço Trabalho × Pessoal</div>'+bars({'Trabalho':workH,'Pessoal':persH},'_bal')+'<div class="muted" style="font-size:12px;margin-top:6px">'+wp+'% trabalho · '+(100-wp)+'% pessoal</div></div>';
+    h+='<div class="indcols" style="margin-top:14px"><div class="card"><div class="grp-h">Horas por projeto</div>'+bars(byProj,'projeto')+'</div><div class="card"><div class="grp-h">Horas por subtipo</div>'+bars(bySub,'subtipo')+'</div></div>';
+  }
   el('view').innerHTML=h;
 }
-function bars(map,cat){var keys=Object.keys(map);if(!keys.length)return '<div class="muted" style="font-size:12px">Sem dados no período.</div>';
+function bars(map,cat,unit){var keys=Object.keys(map);if(!keys.length)return '<div class="muted" style="font-size:12px">Sem dados no período.</div>';
   var max=Math.max.apply(null,keys.map(function(k){return map[k];}));
   keys.sort(function(a,b){return map[b]-map[a];});
   return '<div class="bars">'+keys.map(function(k){var c=cfgFind(cat,k);var col=c?c.cor:'#3D43A2';var pct=Math.round(map[k]/max*100);
-    return '<div class="bar"><div class="top"><span>'+esc(k)+'</span><span class="muted">'+fmtH(map[k])+'h</span></div><div class="track"><div class="fill" style="width:'+pct+'%;background:'+col+'"></div></div></div>';}).join('')+'</div>';
+    var lbl=(unit&&unit!=='h')?(map[k]+unit):(fmtH(map[k])+'h');
+    return '<div class="bar"><div class="top"><span>'+esc(k)+'</span><span class="muted">'+lbl+'</span></div><div class="track"><div class="fill" style="width:'+pct+'%;background:'+col+'"></div></div></div>';}).join('')+'</div>';
 }
 
 /* ============================ SISTEMA ============================ */
@@ -753,8 +778,8 @@ var sysTab='cat';
 function exportAgenda(){toast('Exportando…');api('exportState').then(function(r){toast(r||'Exportado');}).catch(function(){toast('Falha ao exportar');});}
 function renderSys(){
   var h='<div class="page-head"><h1>Gestão do Sistema</h1><div class="sub">Tabelas de apoio editáveis</div><div class="spacer"></div><button class="btn btn-sm" onclick="exportAgenda()" title="Grava state/current.json no Drive para o cron ler">⬇ Exportar agenda</button></div>';
-  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais'],['fin','Compromissos financeiros'],['livro','Livros']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
-  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else if(sysTab==='fin')h+=sysFin();else if(sysTab==='livro')h+=sysLivros();else h+=sysSimple(sysTab);
+  h+='<div class="sys-tabs">'+[['cat','Tipos & Subtipos'],['projeto','Projetos / Empresas'],['local','Locais'],['fin','Compromissos financeiros'],['livro','Livros'],['serie','Séries de treino']].map(function(t){return '<button class="sys-tab'+(sysTab===t[0]?' active':'')+'" onclick="sysTab=\''+t[0]+'\';renderSys()">'+t[1]+'</button>';}).join('')+'</div>';
+  if(sysTab==='cat')h+=sysCats();else if(sysTab==='local')h+=sysLocais();else if(sysTab==='fin')h+=sysFin();else if(sysTab==='livro')h+=sysLivros();else if(sysTab==='serie')h+=sysSeries();else h+=sysSimple(sysTab);
   el('view').innerHTML=h;
 }
 /** Locais agrupados por contexto (pai = Trabalho | Pessoal; legado sem pai conta como Trabalho). */
@@ -983,9 +1008,46 @@ function saveLivroItem(id){var v=el('lv_val').value.trim();if(!v){toast('Dê um 
   saveCfg();closeModal();toast('Salvo');renderSys();}
 /** CRITÉRIO de horas de leitura: horas base (ajuste manual) + soma da duração dos eventos Leitura→Livro
  *  DESTE livro marcados como ✓ feito. Robusto ao tri-estado (só conta o estado final 'done'). */
-function livroHoras(l){var base=livroDts(l).horas||0;var ev=EVENTS.reduce(function(s,e){return s+((e.subsub==='Livro'&&e.status==='done'&&(e.livro||'')===l.valor)?durH(e):0);},0);return base+ev;}
+function livroHoras(l){var base=livroDts(l).horas||0;var ev=EVENTS.reduce(function(s,e){return s+((e.subsub==='Livro'&&e.status==='done'&&(e.detalhe||'')===l.valor)?durH(e):0);},0);return base+ev;}
 /** Eventos de leitura (feitos) de um livro num intervalo [iso1,iso2] — usado no indicador. */
-function livroEventos(nome,iso1,iso2){return EVENTS.filter(function(e){return e.subsub==='Livro'&&e.status==='done'&&(e.livro||'')===nome&&(!iso1||e.date>=iso1)&&(!iso2||e.date<=iso2);});}
+function livroEventos(nome,iso1,iso2){return EVENTS.filter(function(e){return e.subsub==='Livro'&&e.status==='done'&&(e.detalhe||'')===nome&&(!iso1||e.date>=iso1)&&(!iso2||e.date<=iso2);});}
+
+/* ============================ SÉRIES DE TREINO (cat:'serie') — Academia → série ============================
+ * cor="ini|fim|meta" (datas + meta em semanas, default 8); pai=status ('ativa'|'encerrada').
+ * Sessões CALCULADAS dos eventos subsub='Academia' com detalhe===série marcados feito. */
+var SERIE_ST={ativa:'Ativa',encerrada:'Encerrada'};
+function series(){return CFG.filter(function(x){return x.cat==='serie';}).sort(function(a,b){return (a.ordem||0)-(b.ordem||0);});}
+function seriesByStatus(s){return series().filter(function(l){return (l.pai||'ativa')===s;});}
+function serieDts(l){var p=String(l.cor||'').split('|');return {ini:p[0]||'',fim:p[1]||'',meta:parseInt(p[2])||8};}
+function serieSetDts(l,d){l.cor=(d.ini||'')+'|'+(d.fim||'')+'|'+(d.meta||8);}
+function serieSessoes(nome,iso1,iso2){return EVENTS.filter(function(e){return e.subsub==='Academia'&&e.status==='done'&&(e.detalhe||'')===nome&&(!iso1||e.date>=iso1)&&(!iso2||e.date<=iso2);}).length;}
+function serieSemanas(l){var d=serieDts(l);if(!d.ini)return 0;return Math.max(0,Math.round(daysBetween(d.ini,d.fim||isoOf(TODAY))/7));}
+function serieInfo(l){var d=serieDts(l),parts=[],ses=serieSessoes(l.valor);parts.push(ses+'x');if(d.ini){var sem=serieSemanas(l),al=(!d.fim&&sem>=d.meta)?' · ⚠️ trocar':'';parts.push(sem+'/'+d.meta+' sem'+al);}return parts.join(' · ');}
+function serieApply(l,st){var d=serieDts(l);if(st==='ativa'){if(!d.ini)d.ini=isoOf(TODAY);d.fim='';}if(st==='encerrada'&&!d.fim)d.fim=isoOf(TODAY);serieSetDts(l,d);l.pai=st;}
+function serieStatus(id,st){var l=cfgById(id);if(!l)return;serieApply(l,st);saveCfg();toast(l.valor+': '+SERIE_ST[st]);renderSys();}
+function sysSeries(){
+  var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Séries de treino de academia. A <b>Ativa</b> é a atual; você designa a série no evento (Treino → Academia). O app conta as <b>sessões</b> e as <b>semanas</b>, e avisa quando passar da meta (~8 sem) para trocar.</div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-sm btn-primary" onclick="openSerie(\'\')">＋ Série</button></div>';
+  if(!series().length)return h+'<div class="hempty" style="text-align:center;padding:22px">Nenhuma série ainda. Adicione a que está fazendo.</div>';
+  [['ativa','🔥 Ativa'],['encerrada','✓ Encerradas']].forEach(function(g){var items=seriesByStatus(g[0]);if(!items.length)return;
+    h+='<div class="grp-h"><b>'+g[1]+'</b> <span class="muted" style="font-size:11px">('+items.length+')</span></div>';
+    items.forEach(function(l){var t=serieInfo(l);
+      h+='<div class="sub-block"><div class="sub-row"><b>'+esc(l.valor)+'</b>'+(t?' <span class="muted" style="font-size:11px">'+esc(t)+'</span>':'')+'<span style="flex:1"></span>'+
+        '<select class="locsel" style="max-width:120px" onchange="serieStatus(\''+l.id+'\',this.value)">'+['ativa','encerrada'].map(function(st){return '<option value="'+st+'"'+((l.pai||'ativa')===st?' selected':'')+'>'+SERIE_ST[st]+'</option>';}).join('')+'</select>'+
+        '<button class="icbtn" onclick="openSerie(\''+l.id+'\')">✎</button><button class="icbtn" onclick="delCfg(\''+l.id+'\')">×</button></div></div>';});});
+  return h;
+}
+function openSerie(id){var c=id?cfgById(id):{valor:'',pai:'ativa',cor:''};var d=serieDts(c);
+  openModal('<div class="modal-head"><h3>'+(id?'Editar ':'Nova ')+'série</h3><button class="x" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body"><div class="field"><label>Nome da série</label><input id="sr_val" value="'+esc(c.valor)+'" placeholder="ex.: Treino ABC — hipertrofia"></div>'+
+    '<div class="grid2"><div class="field"><label>Status</label><select id="sr_st"><option value="ativa"'+((c.pai||'ativa')==='ativa'?' selected':'')+'>Ativa (atual)</option><option value="encerrada"'+(c.pai==='encerrada'?' selected':'')+'>Encerrada</option></select></div>'+
+    '<div class="field"><label>Meta (semanas)</label><input id="sr_meta" type="number" min="1" max="52" value="'+d.meta+'"></div></div></div>'+
+    '<div class="modal-foot"><div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveSerieItem(\''+(id||'')+'\')">Salvar</button></div></div>');
+}
+function saveSerieItem(id){var v=el('sr_val').value.trim();if(!v){toast('Dê um nome');return;}var st=el('sr_st').value;
+  var l=id?cfgById(id):{id:'serie-'+Date.now(),cat:'serie',valor:'',cor:'',ordem:series().length+1,pai:'ativa',gov:'usuario'};
+  l.valor=v;serieApply(l,st);var d=serieDts(l);d.meta=Math.max(1,Math.min(52,parseInt(el('sr_meta').value)||8));serieSetDts(l,d);
+  if(!id)CFG.push(l);saveCfg();closeModal();toast('Salvo');renderSys();}
 
 /* ============================ HOME (Início) ============================
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
