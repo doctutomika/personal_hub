@@ -605,7 +605,7 @@ function evCard(e){
   var chips='';
   if(e.projeto){var p=cfgFind('projeto',e.projeto);chips+='<span class="chip" style="background:'+hex2bg(p?p.cor:col)+';color:'+(p?p.cor:col)+'"><span class="dot" style="background:'+(p?p.cor:col)+'"></span>'+e.projeto+'</span>';}
   if(e.subtipo)chips+='<span class="chip" style="background:#EEF0FA;color:#5a5f86">'+e.subtipo+'</span>';
-  if(e.subsub)chips+='<span class="chip" style="background:#F4EFE3;color:#7a5300">'+esc(e.subsub)+'</span>';
+  if(e.subsub)chips+='<span class="chip" style="background:#F4EFE3;color:#7a5300">'+esc(e.subsub)+((e.subsub==='Livro'&&e.livro)?': '+esc(e.livro):'')+'</span>';
   var tlabel=e.start+'–'+e.end;
   return '<div class="ev '+cls+'" style="border-left-color:'+col+'" onclick="openEvent(\''+e.id+'\')">'+
     '<div class="ev-actions"><span class="st '+cls+'" title="feito/não/—" onclick="event.stopPropagation();cycleStatus(\''+e.id+'\')">'+sym+'</span><button class="ev-del" title="Cancelar evento" onclick="event.stopPropagation();delEvent(\''+e.id+'\')">×</button></div>'+
@@ -626,9 +626,8 @@ function noteHTML(raw){
   return out;
 }
 function goToday(){cur=new Date(TODAY);renderAgenda();window.scrollTo(0,0);}
-function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e)return;e.status=e.status===''?'done':(e.status==='done'?'miss':'');saveEv();
-  if(e.status==='done'&&e.subsub==='Livro')livroOnRead(durH(e));   // leitura de livro do dia → soma horas no livro ativo
-  renderAgenda();}
+function cycleStatus(id){var e=EVENTS.find(function(x){return x.id===id;});if(!e)return;e.status=e.status===''?'done':(e.status==='done'?'miss':'');saveEv();renderAgenda();}
+  /* horas de leitura NÃO são mais somadas aqui (evita o bug do tri-estado ✓→✗) — são CALCULADAS por livroHoras() a partir dos eventos Livro marcados como feito */
 
 
 /* ============================ MODAL EVENTO ============================ */
@@ -653,30 +652,37 @@ function openEvent(id, prefill){
       '<div class="field"><label>Fim</label><input id="m_end" type="time" step="900" value="'+e.end+'"></div></div>'+
     '<div class="grid2"><div class="field"><label>Tipo</label><select id="m_tipo" onchange="fillSub()">'+tipoOpts+'</select></div>'+
       '<div class="field"><label>Subtipo</label><select id="m_sub" onchange="fillSubsub()"></select></div></div>'+
-    '<div class="field" id="m_subsub_wrap" style="display:none"><label id="m_subsub_lbl">Detalhe</label><select id="m_subsub"></select></div>'+
+    '<div class="field" id="m_subsub_wrap" style="display:none"><label id="m_subsub_lbl">Detalhe</label><select id="m_subsub" onchange="fillLivro()"></select></div>'+
+    '<div class="field" id="m_livro_wrap" style="display:none"><label>Qual livro (para contabilizar a leitura)</label><select id="m_livro"></select></div>'+
     '<div class="field"><label>Projeto / Empresa</label><select id="m_proj">'+projOpts+'</select></div>'+
     '<div class="field"><label>Nota (opcional)</label><textarea id="m_note" rows="2" placeholder="Observação — link: [texto curto](https://… ou file:///…)">'+esc(e.note)+'</textarea><div class="hint">Dica: <code>[Minutas NSP](https://…)</code> mostra só o texto e abre o link.</div></div>'+
     '<div class="muted" id="m_calc" style="font-size:12px"></div>'+
     '</div>'+
     '<div class="modal-foot"><div style="display:flex;gap:8px">'+(isNew?'':'<button class="btn btn-sm btn-ghost" onclick="dupEvent()">⧉ Duplicar</button><button class="btn btn-sm btn-ghost" style="color:var(--miss)" onclick="delEvent(\''+e.id+'\')">Excluir</button>')+'</div>'+
     '<div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveEvent(\''+(e.id||'')+'\')">Salvar</button></div></div>');
-  fillSub(e.subtipo); fillSubsub(e.subsub);
+  fillSub(e.subtipo); fillSubsub(e.subsub); fillLivro(e.livro);
   el('m_start').addEventListener('change',autoEnd);   // ao mudar o início, fim vai p/ +1h automaticamente
   ['m_end','m_tipo'].forEach(function(idd){el(idd).addEventListener('change',calcDur);});calcDur();
 }
 /** Ao escolher a hora de início, joga o fim para 1h depois (padrão 1h). */
 function autoEnd(){var a=toMin(el('m_start').value);var b=(a+60)%1440;el('m_end').value=pad(Math.floor(b/60))+':'+pad(b%60);calcDur();}
 /** Duplica o evento aberto: abre um NOVO com os mesmos dados (ajuste a data/hora e salve → vira outro). */
-function dupEvent(){var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;var pf={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim()};openEvent(null,pf);toast('Duplicado — ajuste data/hora e salve');}
+function dupEvent(){var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;var pf={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim(),livro:(ss==='Livro'&&el('m_livro'))?el('m_livro').value:''};openEvent(null,pf);toast('Duplicado — ajuste data/hora e salve');}
 function fillSub(sel){var tipo=el('m_tipo').value;var subs=subtiposOf(tipo);el('m_sub').innerHTML=subs.map(function(s){return '<option value="'+s.valor+'"'+(s.valor===sel?' selected':'')+'>'+s.valor+'</option>';}).join('');}
 function fillSubsub(sel){var tipo=el('m_tipo').value,sub=el('m_sub').value;var nn=subsubOf(tipo,sub);var w=el('m_subsub_wrap');
-  if(!nn.length){w.style.display='none';el('m_subsub').innerHTML='';return;}
+  if(!nn.length){w.style.display='none';el('m_subsub').innerHTML='';fillLivro();return;}
   w.style.display='';el('m_subsub_lbl').textContent=(sub==='Leitura'?'O que está lendo / estudando':'Detalhe ('+sub+')');
-  el('m_subsub').innerHTML='<option value="">—</option>'+nn.map(function(x){return '<option value="'+x.valor+'"'+(x.valor===sel?' selected':'')+'>'+x.valor+'</option>';}).join('');}
+  el('m_subsub').innerHTML='<option value="">—</option>'+nn.map(function(x){return '<option value="'+x.valor+'"'+(x.valor===sel?' selected':'')+'>'+x.valor+'</option>';}).join('');fillLivro();}
+/** Seletor de livro: só aparece quando o detalhe da leitura é "Livro". Ativos (lendo) primeiro. */
+function fillLivro(sel){var w=el('m_livro_wrap');if(!w)return;var isBook=(el('m_subsub')&&el('m_subsub').value==='Livro');
+  if(!isBook){w.style.display='none';return;}
+  w.style.display='';var cur=(sel!==undefined&&sel!==null)?sel:(el('m_livro')?el('m_livro').value:'');
+  var ord={lendo:0,espera:1,lido:2},opts=livros().slice().sort(function(a,b){return (ord[a.pai||'espera']||1)-(ord[b.pai||'espera']||1);});
+  el('m_livro').innerHTML='<option value="">— escolher —</option>'+opts.map(function(l){var st=(l.pai==='lendo'?' · lendo':(l.pai==='lido'?' · lido':' · espera'));return '<option value="'+esc(l.valor)+'"'+(l.valor===cur?' selected':'')+'>'+esc(l.valor)+st+'</option>';}).join('');}
 function calcDur(){var a=toMin(el('m_start').value),b=toMin(el('m_end').value);if(b<=a)b+=1440;var h=(b-a)/60;var work=el('m_tipo').value==='Trabalho';el('m_calc').innerHTML='Duração: <b>'+fmtH(h)+'h</b>'+(work?' · conta como trabalho':' · pessoal');}
 function saveEvent(id){
   var ss=(el('m_subsub_wrap').style.display==='none')?'':el('m_subsub').value;
-  var o={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim()};
+  var o={titulo:el('m_ti').value.trim(),date:el('m_date').value,start:el('m_start').value,end:el('m_end').value,subtipo:el('m_sub').value,subsub:ss,projeto:el('m_proj').value,local:el('m_loc').value,note:el('m_note').value.trim(),livro:(ss==='Livro'&&el('m_livro'))?el('m_livro').value:''};
   if(!o.titulo){toast('Dê um título');return;}
   if(!o.date){toast('Escolha a data');return;}   // input de data nativo pode ser limpo → evita evento órfão sem data
   if(id){var e=EVENTS.find(function(x){return x.id===id;});Object.assign(e,o);e.fonte='user';}else{o.id=uniqEvtId();o.status='';o.fonte='user';EVENTS.push(o);}
@@ -715,11 +721,12 @@ function indNav(n){
 function indToday(){indRef=new Date(TODAY);renderInd();}
 function renderInd(){
   var evs=EVENTS.filter(function(e){return inRange(e.date);});
-  var workH=0,persH=0,done=0,plan=0,byProj={},bySub={},byObj={};
+  var workH=0,persH=0,done=0,plan=0,byProj={},bySub={},byObj={},byBook={};
   evs.forEach(function(e){var h=durH(e);if(isWork(e))workH+=h;else persH+=h;plan++;if(e.status==='done')done++;
     if(e.projeto)byProj[e.projeto]=(byProj[e.projeto]||0)+h;
     bySub[e.subtipo]=(bySub[e.subtipo]||0)+h;
-    if(e.subsub)byObj[e.subsub]=(byObj[e.subsub]||0)+h;});
+    if(e.subsub)byObj[e.subsub]=(byObj[e.subsub]||0)+h;
+    if(e.subsub==='Livro'&&e.status==='done'&&e.livro)byBook[e.livro]=(byBook[e.livro]||0)+h;});   // leitura FEITA por livro
   var ader=plan?Math.round(done/plan*100):0;
   var h='<div class="page-head"><h1>Indicadores</h1><div class="spacer"></div><div class="seg">'+
     [['dia','Dia'],['semana','Semana'],['mes','Mês'],['ano','Ano'],['alltime','Tudo']].map(function(p){return '<button class="'+(indPeriod===p[0]?'active':'')+'" onclick="indPeriod=\''+p[0]+'\';renderInd()">'+p[1]+'</button>';}).join('')+'</div></div>';
@@ -731,6 +738,7 @@ function renderInd(){
   h+='<div class="indcols"><div class="card"><div class="grp-h">Horas por projeto</div>'+bars(byProj,'projeto')+'</div>'+
     '<div class="card"><div class="grp-h">Horas por subtipo</div>'+bars(bySub,'subtipo')+'</div></div>';
   if(Object.keys(byObj).length)h+='<div class="card" style="margin-top:14px"><div class="grp-h">Leitura / estudo — por objeto</div>'+bars(byObj,'subsub')+'</div>';
+  if(Object.keys(byBook).length)h+='<div class="card" style="margin-top:14px"><div class="grp-h">📖 Leitura por livro — horas FEITAS no período</div>'+bars(byBook,'_book')+'</div>';
   el('view').innerHTML=h;
 }
 function bars(map,cat){var keys=Object.keys(map);if(!keys.length)return '<div class="muted" style="font-size:12px">Sem dados no período.</div>';
@@ -937,7 +945,7 @@ function livroDts(l){var p=String(l.cor||'').split('|');return {ini:p[0]||'',fim
 function livroSetDts(l,d){l.cor=(d.ini||'')+'|'+(d.fim||'')+'|'+(d.horas||0)+'|'+(d.modo||'');}
 function livroModoLbl(m){return {fisico:'📕 Físico',kindle:'📱 Kindle',phygital:'📖 Phygital'}[m]||'';}
 function daysBetween(a,b){return Math.max(0,Math.round((parseISO(b)-parseISO(a))/86400000));}
-function livroTempo(l){var d=livroDts(l),parts=[];if(d.ini&&d.fim)parts.push('lido em '+(daysBetween(d.ini,d.fim)||1)+' dias');else if(d.ini)parts.push('lendo há '+(daysBetween(d.ini,isoOf(TODAY))||0)+' dias');if(d.horas)parts.push(fmtH(d.horas)+'h lidas');if(d.modo)parts.push(livroModoLbl(d.modo));return parts.join(' · ');}
+function livroTempo(l){var d=livroDts(l),hrs=livroHoras(l),parts=[];if(d.ini&&d.fim)parts.push('lido em '+(daysBetween(d.ini,d.fim)||1)+' dias');else if(d.ini)parts.push('lendo há '+(daysBetween(d.ini,isoOf(TODAY))||0)+' dias');if(hrs)parts.push(fmtH(hrs)+'h lidas');if(d.modo)parts.push(livroModoLbl(d.modo));return parts.join(' · ');}
 function sysLivros(){
   var h='<div class="muted" style="font-size:12px;margin-bottom:8px">Seus livros por status. <b>Em leitura</b> = livro ativo. O <b>tempo de leitura</b> conta os dias de início→fim. Ao marcar a leitura de <b>Livro</b> na agenda, o sistema usa o livro ativo (pergunta se houver mais de um).</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-sm btn-primary" onclick="openLivro(\'\')">＋ Livro</button></div>';
@@ -964,7 +972,7 @@ function openLivro(id){var c=id?cfgById(id):{valor:'',pai:'espera'};
     '<div class="modal-body"><div class="field"><label>Título</label><input id="lv_val" value="'+esc(c.valor)+'" placeholder="ex.: Lifespan — David Sinclair"></div>'+
     '<div class="grid2"><div class="field"><label>Status</label><select id="lv_st"><option value="espera"'+((c.pai||'espera')==='espera'?' selected':'')+'>Na lista de espera</option><option value="lendo"'+(c.pai==='lendo'?' selected':'')+'>Em leitura (ativo)</option><option value="lido"'+(c.pai==='lido'?' selected':'')+'>Lido</option></select></div>'+
     '<div class="field"><label>Modo de leitura</label><select id="lv_modo">'+['fisico','kindle','phygital'].map(function(m){var lm=(livroDts(c).modo||'fisico');return '<option value="'+m+'"'+(lm===m?' selected':'')+'>'+({fisico:'📕 Físico',kindle:'📱 Kindle',phygital:'📖 Phygital (ambos)'}[m])+'</option>';}).join('')+'</select></div></div>'+
-    '<div class="field"><label>Horas lidas</label><input id="lv_hrs" type="number" step="0.5" min="0" value="'+livroDts(c).horas+'"></div></div>'+
+    '<div class="field"><label>Horas base (ajuste)</label><input id="lv_hrs" type="number" step="0.5" min="0" value="'+livroDts(c).horas+'"><div class="hint">As horas de leitura são somadas automaticamente dos eventos Livro marcados como feito. Este campo é só um ajuste manual/base.</div></div></div>'+
     '<div class="modal-foot"><div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="closeModal()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="saveLivroItem(\''+(id||'')+'\')">Salvar</button></div></div>');
 }
 function saveLivroItem(id){var v=el('lv_val').value.trim();if(!v){toast('Dê um título');return;}var st=el('lv_st').value;
@@ -973,19 +981,11 @@ function saveLivroItem(id){var v=el('lv_val').value.trim();if(!v){toast('Dê um 
   var d=livroDts(l);d.horas=Math.max(0,parseFloat(el('lv_hrs').value)||0);d.modo=el('lv_modo').value;livroSetDts(l,d);
   if(!id)CFG.push(l);
   saveCfg();closeModal();toast('Salvo');renderSys();}
-/** Ao marcar um evento Leitura→Livro como feito: soma as horas do evento ao livro ativo (escolhe se houver 0 ou >1). */
-function livroOnRead(dur){dur=dur||0;var at=livrosByStatus('lendo');
-  if(at.length===1)return livroLogRead(at[0],dur);
-  if(at.length>1)return livroPick(at,'Qual livro você leu?',function(l){livroLogRead(l,dur);});
-  var wait=livrosByStatus('espera');
-  if(!wait.length){toast('Sem livro ativo — cadastre em Sistema → Livros');return;}
-  livroPick(wait,'Qual livro você começou a ler?',function(l){livroApplyStatus(l,'lendo');livroLogRead(l,dur);});
-}
-function livroLogRead(l,dur){var d=livroDts(l);d.horas=(d.horas||0)+(dur||0);livroSetDts(l,d);saveCfg();toast('📖 '+l.valor+(dur?' · +'+fmtH(dur)+'h':''));if(page==='sys')renderSys();else if(page==='home')renderHome();}
-var _livroPick=null;
-function livroPick(list,title,cb){_livroPick={list:list,cb:cb};
-  openModal('<div class="modal-head"><h3>'+esc(title)+'</h3><button class="x" onclick="closeModal()">×</button></div><div class="modal-body">'+list.map(function(l,i){return '<button class="btn" style="width:100%;margin-bottom:6px;justify-content:flex-start" onclick="livroPicked('+i+')">📕 '+esc(l.valor)+'</button>';}).join('')+'</div>');}
-function livroPicked(i){var p=_livroPick;closeModal();if(p&&p.cb)p.cb(p.list[i]);}
+/** CRITÉRIO de horas de leitura: horas base (ajuste manual) + soma da duração dos eventos Leitura→Livro
+ *  DESTE livro marcados como ✓ feito. Robusto ao tri-estado (só conta o estado final 'done'). */
+function livroHoras(l){var base=livroDts(l).horas||0;var ev=EVENTS.reduce(function(s,e){return s+((e.subsub==='Livro'&&e.status==='done'&&(e.livro||'')===l.valor)?durH(e):0);},0);return base+ev;}
+/** Eventos de leitura (feitos) de um livro num intervalo [iso1,iso2] — usado no indicador. */
+function livroEventos(nome,iso1,iso2){return EVENTS.filter(function(e){return e.subsub==='Livro'&&e.status==='done'&&(e.livro||'')===nome&&(!iso1||e.date>=iso1)&&(!iso2||e.date<=iso2);});}
 
 /* ============================ HOME (Início) ============================
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
@@ -1067,7 +1067,7 @@ function renderHome(){
   h+='</div>';
   /* Cruzamento — seção-assinatura do domingo (só aparece se o DID da semana tiver o campo) */
   if(DID&&DID.cruzamento&&DID.cruzamento.length){var cz0=DID.cruzamento[0];
-    h+='<div class="card hcard cruz-home"><h3>🔀 O Cruzamento <span class="cz-sub">Saúde × Mercado</span></h3><h4>'+esc(cz0.titulo)+'</h4><p>'+esc(homeTxt(cz0.resumo||''))+'</p>'+
+    h+='<div class="card hcard cruz-home"><h3>🔀 O Cruzamento <span class="cz-sub">Saúde × Mercado</span></h3><h4>'+esc(cz0.titulo)+'</h4><p>'+esc(homeTxt(cz0.resumo||''))+'</p>'+/*cz*/
       '<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="go(\'did\')">Ler no DID →</button></div></div>';
   }
   /* Financeiro — Hoje (reminders do dia) + Próximos (os 2 seguintes) */
@@ -1084,7 +1084,7 @@ function renderHome(){
   /* Livro ativo — só aparece se houver livro "Em leitura" */
   var livAtivos=(typeof livrosByStatus==='function')?livrosByStatus('lendo'):[];
   if(livAtivos.length){
-    h+='<div class="card hcard"><h3>📖 Lendo agora</h3><div class="hbook-list">'+livAtivos.map(function(l){var d=livroDts(l);var dias=d.ini?daysBetween(d.ini,isoOf(TODAY)):0;return '<div class="hbook"><div class="hbook-t">'+esc(l.valor)+'</div><div class="hbook-m">'+(d.horas?'<b>'+fmtH(d.horas)+'h</b> lidas':'0h lidas')+(d.ini?' · há '+dias+' dia'+(dias===1?'':'s'):'')+(d.modo?' · '+livroModoLbl(d.modo):'')+'</div></div>';}).join('')+'</div>';
+    h+='<div class="card hcard"><h3>📖 Lendo agora</h3><div class="hbook-list">'+livAtivos.map(function(l){var d=livroDts(l);var dias=d.ini?daysBetween(d.ini,isoOf(TODAY)):0;var hrs=livroHoras(l);return '<div class="hbook"><div class="hbook-t">'+esc(l.valor)+'</div><div class="hbook-m">'+(hrs?'<b>'+fmtH(hrs)+'h</b> lidas':'0h lidas')+(d.ini?' · há '+dias+' dia'+(dias===1?'':'s'):'')+(d.modo?' · '+livroModoLbl(d.modo):'')+'</div></div>';}).join('')+'</div>';
     h+='<div class="hfoot"><span style="flex:1"></span><button class="btn btn-sm" onclick="sysTab=\'livro\';go(\'sys\')">Livros →</button></div></div>';
   }
   /* Mercado */
