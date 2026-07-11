@@ -364,6 +364,16 @@ a{color:inherit}
 .tts-on{background:var(--ind2)!important;color:#fff!important;border-color:var(--ind2)!important}
 .mir-bar .tts-on{background:#1a4d4d!important;border-color:#1a4d4d!important}
 
+/* ===== Áudio pré-gerado (🎧 MP3 da edição) — DID e MIR ===== */
+.aud-slot{display:inline-flex;align-items:center;max-width:100%}
+.aud-btn{border-color:var(--gold);background:#FBF1DC;color:var(--ind0);font-weight:700}
+.aud-btn:hover{background:var(--goldL)}
+.aud-btn:disabled{opacity:.6;cursor:default}
+.aud-bar{display:inline-flex;align-items:center;gap:6px;background:var(--ind-soft);border:1px solid var(--gold);border-radius:10px;padding:4px 6px;flex-wrap:wrap;max-width:100%}
+.aud-bar audio{height:30px;max-width:min(320px,58vw)}
+.aud-bar .btn{white-space:nowrap}
+@media (max-width:560px){ .aud-bar audio{max-width:100%} }
+
 /* ===== MIR: barra de ações + card-ponte de saúde no DID ===== */
 .mir-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .did-teaser{border-left:5px solid #1a4d4d;margin-top:14px}
@@ -438,6 +448,7 @@ a{color:inherit}
     getDIDByName:function(name){if(canNet())return getJSON('didByName','&name='+encodeURIComponent(name)).catch(function(){return null;});return Promise.resolve(null);},
     listMIRs:function(){if(canNet())return getJSON('mirs').then(function(d){if(Array.isArray(d))cset('mirs',d);return cget('mirs',[]);}).catch(function(){return cget('mirs',[]);});return Promise.resolve(cget('mirs',[]));},
     getMIRByName:function(name){if(canNet())return getJSON('mirByName','&name='+encodeURIComponent(name)).catch(function(){return null;});return Promise.resolve(null);},
+    getAudio:function(kind,date){if(canNet())return getJSON('audio','&kind='+encodeURIComponent(kind)+'&date='+encodeURIComponent(date)).catch(function(){return null;});return Promise.resolve(null);},
     pullAgenda:function(){if(canNet())return getJSON('pull').then(function(r){if(r&&r.events){var b=cget('bootstrap',EMPTY);b.events=r.events;cset('bootstrap',b);}return r||{events:[],applied:0};}).catch(function(){return {events:cget('bootstrap',EMPTY).events||[],applied:0};});return Promise.resolve({events:cget('bootstrap',EMPTY).events||[],applied:0});},
     saveAllEvents:function(a){var b=cget('bootstrap',EMPTY);b.events=a;cset('bootstrap',b);queue('saveEvents',a);flush();return true;},
     saveAllConfig:function(a){var b=cget('bootstrap',EMPTY);b.config=a;cset('bootstrap',b);queue('saveConfig',a);flush();return true;},
@@ -876,7 +887,7 @@ function renderDID(){
     api('listDIDs').then(function(l){edDates.did=l||[];if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;if(edDates.did.length)renderDID();}).catch(function(){});
     api('getDID').then(function(x){if(x){DID=x;if(!edCur.did&&edDates.did[0])edCur.did=edDates.did[0].name;renderDID();}}).catch(function(){});}
   var d=DID, dl=d.dataLabel||d.data||'';
-  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button>'+ttsBtnsHTML('did')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="didDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="didPrint()">🖨️ Exportar PDF</button></div>';
+  var h='<div class="ed-bar">'+edPickHTML('did')+'<button class="btn btn-sm" onclick="reloadDID()">↻ Atualizar</button>'+audioBtnsHTML('did')+ttsBtnsHTML('did')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="didDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="didPrint()">🖨️ Exportar PDF</button></div>';
   h+='<div class="did-mast"><div class="big">DID</div><div class="tl">'+(d.subtitulo||'Jornal pessoal de inteligência de mercado')+'</div>'+
     '<div class="meta"><span><b>'+(d.titulo||'')+'</b></span>'+(dl?'<span>'+esc(dl)+'</span>':'')+(d.local?'<span>'+esc(d.local)+'</span>':'')+'</div></div>';
   h+=didCruzamentoHTML(d.cruzamento);   // seção-assinatura (domingo): Saúde × Mercado
@@ -893,15 +904,16 @@ function renderDID(){
   h+=didTeaserHTML(d.saude_teaser);   // card-ponte → MIR Health (saúde não se repete no DID)
   if(d.note)h+='<div class="did-note">⚙️ '+esc(d.note).replace(/^⚙️\s*/,'')+'</div>';
   el('view').innerHTML=h;
+  if(AUDIO.open==='did')audioWire();
 }
 function reloadDID(){toast('Atualizando DID…');
   api('listDIDs').then(function(l){edDates.did=l||[];if(edDates.did[0])edCur.did=edDates.did[0].name;}).catch(function(){});
   api('getDID').then(function(x){if(x){DID=x;renderDID();toast('DID atualizado');}else{toast('Nenhum DID novo no Drive');}})
   .catch(function(){toast('Falha ao atualizar DID');});}
-function loadDIDByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='did')ttsStop();toast('Carregando edição…');edCur.did=name;
+function loadDIDByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='did')ttsStop();if(AUDIO.open==='did')audioClose();toast('Carregando edição…');edCur.did=name;
   api('getDIDByName',name).then(function(x){if(x){DID=x;renderDID();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
-function loadMIRByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='mir')ttsStop();toast('Carregando edição…');edCur.mir=name;
+function loadMIRByName(name){if(!name)return;if(TTS.playing&&TTS.ctx==='mir')ttsStop();if(AUDIO.open==='mir')audioClose();toast('Carregando edição…');edCur.mir=name;
   api('getMIRByName',name).then(function(x){if(x){MIR=x;renderMIR();toast('Edição carregada');}else toast('Edição não encontrada');})
   .catch(function(){toast('Falha ao carregar');});}
 
@@ -1227,7 +1239,8 @@ function ttsNext(){if(!TTS.playing)return;if(TTS.i>=TTS.chunks.length){ttsStopHa
   u.onend=function(){if(g!==TTS.gen||!TTS.playing)return;TTS.i++;ttsNext();};
   u.onerror=function(){if(g!==TTS.gen||!TTS.playing)return;TTS.i++;ttsNext();};
   try{speechSynthesis.speak(u);}catch(e){}}
-function ttsPlay(chunks,ctx){ttsStopHard();TTS.gen++;TTS.chunks=chunks;TTS.i=0;TTS.ctx=ctx;TTS.playing=true;TTS.paused=false;ttsNext();ttsUi();}
+function ttsPlay(chunks,ctx){var a=el('audEl');if(a){try{a.pause();}catch(e){}}   // não sobrepor ao MP3
+  ttsStopHard();TTS.gen++;TTS.chunks=chunks;TTS.i=0;TTS.ctx=ctx;TTS.playing=true;TTS.paused=false;ttsNext();ttsUi();}
 function ttsStopHard(){TTS.gen++;TTS.playing=false;TTS.paused=false;TTS.chunks=[];TTS.i=0;TTS.ctx='';try{speechSynthesis.cancel();}catch(e){}}
 function ttsStop(){ttsStopHard();ttsUi();}
 function ttsToggle(kind){if(!ttsSupported()){toast('Leitura por voz não suportada neste navegador');return;}
@@ -1246,6 +1259,55 @@ function ttsUi(){var b=el('ttsBtn');if(!b)return;var kind=b.getAttribute('data-c
   b.textContent=active?(TTS.paused?'▶ Continuar':'⏸ Pausar'):'🔊 Ouvir';b.classList.toggle('tts-on',!!active);
   var s=el('ttsStopBtn');if(s)s.style.display=active?'':'none';
   var r=el('ttsRateBtn');if(r)r.textContent=String(TTS.rate).replace('.',',')+'×';}
+
+/* ============================ ÁUDIO PRÉ-GERADO (MP3) — DID e MIR ============================
+ * A rotina de nuvem publica <kind>-audio-<date>.mp3 na pasta do dia; o app busca via api('getAudio')
+ * e toca num <audio> nativo (scrubber do sistema). Sem áudio (mp3:null) ou offline → fallback
+ * automático pro TTS (ttsToggle). Velocidade compartilha o estado do TTS (TTS.rate / hub_tts_rate). */
+var AUDIO_CACHE={};   // 'kind|date' -> blob URL (não rebaixa o MP3 num segundo clique)
+var AUDIO={open:'',kind:'',url:'',loading:false,autoplay:false};
+/** Data (ISO) da edição exibida: nome da edição escolhida > campo data do objeto > hoje. */
+function audioDateOf(kind){var m=/(\d{4}-\d{2}-\d{2})/.exec(edCur[kind]||'');if(m)return m[1];
+  var d=kind==='mir'?MIR:DID,iso=d&&d.data?String(d.data):'';
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso)?iso:isoOf(TODAY);}
+function audioBlobUrl(b64){var bin=atob(b64),n=bin.length,bytes=new Uint8Array(n);for(var i=0;i<n;i++)bytes[i]=bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'}));}
+function audioBtnsHTML(kind){return '<span class="aud-slot" id="audSlot" data-ctx="'+kind+'">'+audioSlotHTML(kind)+'</span>';}
+function audioSlotHTML(kind){
+  if(AUDIO.open===kind)return audioBarHTML();
+  var ld=AUDIO.loading&&AUDIO.kind===kind;
+  return '<button class="btn btn-sm aud-btn" onclick="audioPlay(\''+kind+'\')" title="Ouvir o áudio da edição"'+(ld?' disabled':'')+'>'+(ld?'⏳ Carregando…':'🎧 Ouvir')+'</button>';}
+function audioBarHTML(){
+  return '<span class="aud-bar">'+
+    '<audio id="audEl" controls preload="auto"></audio>'+
+    '<button class="btn btn-sm" onclick="audioSkip(-15)" title="Voltar 15 segundos">⏪ 15s</button>'+
+    '<button class="btn btn-sm" onclick="audioSkip(15)" title="Avançar 15 segundos">15s ⏩</button>'+
+    '<button class="btn btn-sm" id="audRateBtn" onclick="audioRate()" title="Velocidade do áudio">'+String(TTS.rate).replace('.',',')+'×</button>'+
+    '<button class="btn btn-sm" onclick="audioClose()" title="Fechar o áudio">×</button></span>';}
+function audioUi(){var s=el('audSlot');if(!s)return;var kind=s.getAttribute('data-ctx');s.innerHTML=audioSlotHTML(kind);if(AUDIO.open===kind)audioWire();}
+/** Liga o <audio> ao blob URL (chamado após cada render que inclui a barra). Autoplay só no clique. */
+function audioWire(){var a=el('audEl');if(!a||!AUDIO.url)return;a.src=AUDIO.url;a.playbackRate=TTS.rate;
+  if(AUDIO.autoplay){AUDIO.autoplay=false;var p=a.play();if(p&&p.catch)p.catch(function(){});}}
+function audioPlay(kind){
+  if(AUDIO.loading)return;
+  var date=audioDateOf(kind),key=kind+'|'+date;
+  if(AUDIO_CACHE[key]){audioOpenBar(kind,AUDIO_CACHE[key]);return;}
+  AUDIO.loading=true;AUDIO.kind=kind;audioUi();toast('Carregando áudio…');
+  api('getAudio',kind,date).then(function(r){
+    AUDIO.loading=false;
+    if(r&&r.mp3){AUDIO_CACHE[key]=audioBlobUrl(r.mp3);audioOpenBar(kind,AUDIO_CACHE[key]);}
+    else audioFallback(kind);
+  }).catch(function(){AUDIO.loading=false;audioFallback(kind);});}
+/** Sem MP3 (ou offline): avisa e dispara a leitura por voz existente. */
+function audioFallback(kind){audioUi();toast('Sem áudio desta edição — lendo com a voz do sistema');ttsToggle(kind);}
+function audioOpenBar(kind,url){
+  if(TTS.playing)ttsStop();   // não sobrepor as duas leituras
+  AUDIO.open=kind;AUDIO.kind=kind;AUDIO.url=url;AUDIO.autoplay=true;audioUi();}
+function audioSkip(s){var a=el('audEl');if(!a)return;var d=isFinite(a.duration)&&a.duration>0?a.duration:1e9;
+  a.currentTime=Math.max(0,Math.min(d,a.currentTime+s));}
+function audioRate(){var seq=[1,1.25,1.5],i=seq.indexOf(TTS.rate);TTS.rate=seq[(i+1)%seq.length];try{localStorage.setItem('hub_tts_rate',String(TTS.rate));}catch(e){}
+  var a=el('audEl');if(a)a.playbackRate=TTS.rate;var r=el('audRateBtn');if(r)r.textContent=String(TTS.rate).replace('.',',')+'×';ttsUi();}
+function audioClose(){var a=el('audEl');if(a){try{a.pause();}catch(e){}}AUDIO.open='';AUDIO.url='';AUDIO.autoplay=false;audioUi();}
 
 /* ============================ DID — EXPORT HTML + PDF (identidade índigo/teal, produto vendável) ============================
  * Layout standalone (self-contained) para "Baixar HTML" e para o "Exportar PDF" (via window.print, trocando o #view
@@ -1394,8 +1456,9 @@ function renderMIR(){
     api('getMIR').then(function(x){if(x){MIR=x;if(!edCur.mir&&edDates.mir[0])edCur.mir=edDates.mir[0].name;renderMIR();}}).catch(function(){});}
   var d=MIR;
   if(!d){el('view').innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:44px">Carregando MIR Health…<br><small>Se não carregar, confira a conexão.</small></div>';return;}
-  var bar='<div class="mir-bar no-print">'+edPickHTML('mir')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="reloadMIR()">↻</button>'+ttsBtnsHTML('mir')+'<button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
+  var bar='<div class="mir-bar no-print">'+edPickHTML('mir')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="reloadMIR()">↻</button>'+audioBtnsHTML('mir')+ttsBtnsHTML('mir')+'<button class="btn btn-sm" onclick="mirDownloadHTML()">⬇ HTML</button><button class="btn btn-primary" onclick="mirPrint()">🖨️ Exportar PDF</button></div>';
   el('view').innerHTML=bar+'<div class="mir">'+mirBodyHTML(d)+'</div>';
+  if(AUDIO.open==='mir')audioWire();
 }
 function reloadMIR(){toast('Atualizando MIR…');api('getMIR').then(function(x){if(x){MIR=x;renderMIR();toast('MIR atualizado');}else toast('Nada novo');}).catch(function(){toast('Falha ao atualizar');});}
 function mirPrint(){window.print();}   /* @media print isola o #view (a casca some) */
