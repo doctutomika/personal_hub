@@ -958,7 +958,7 @@ a{color:inherit}
 })();
 
 /* SemVer X.Y.Z — bump pelo hub-release; ver CLAUDE.md. Rodapé + clasp -d usam este número. */
-var APP_VERSION='3.17.1';
+var APP_VERSION='3.17.2';
 /* ============================ DADOS / SEED ============================ */
 var MARK='<defs><radialGradient id="sbg" cx="34%" cy="50%" r="80%"><stop offset="0%" stop-color="#CDD1EC"/><stop offset="100%" stop-color="#B9BFE0"/></radialGradient></defs><rect x="4" y="4" width="112" height="112" rx="26" fill="url(#sbg)" stroke="#A9AFD6" stroke-width="1.5"/>__FAN__<circle cx="34" cy="60" r="6.2" fill="#23286B"/>';
 (function buildMark(){
@@ -3684,10 +3684,53 @@ function calNav(kind,delta){var m=edMonthOf(kind);calMonth[kind]=new Date(m.getF
 function pickEdition(kind,iso){var e=edDates[kind].filter(function(x){return x.date===iso;})[0];if(!e)return;calOpen[kind]=false;calMonth[kind]=null;if(kind==='did')loadDIDByName(e.name);else loadMIRByName(e.name);}
 function edCalHTML(kind){var byIso={};edDates[kind].forEach(function(x){byIso[x.date]=x.name;});var m=edMonthOf(kind);var gs=mondayOf(new Date(m.getFullYear(),m.getMonth(),1));var cells='';for(var i=0;i<42;i++){var d=new Date(gs);d.setDate(gs.getDate()+i);var iso=isoOf(d);var inM=d.getMonth()===m.getMonth();var has=!!byIso[iso];var cur=has&&byIso[iso]===edCur[kind];var td=iso===isoOf(TODAY);cells+='<button class="ed-day'+(inM?'':' out')+(has?' has':'')+(cur?' cur':'')+(td?' today':'')+'"'+(has?' onclick="pickEdition(\''+kind+'\',\''+iso+'\')"':' disabled')+'>'+d.getDate()+'</button>';}return '<div class="ed-cal" onclick="event.stopPropagation()"><div class="ed-cal-hd"><button class="icbtn" onclick="calNav(\''+kind+'\',-1)">◀</button><b>'+MONFULL[m.getMonth()]+' '+m.getFullYear()+'</b><button class="icbtn" onclick="calNav(\''+kind+'\',1)">▶</button></div><div class="ed-dows"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div><div class="ed-grid">'+cells+'</div>'+(edDates[kind].length?'':'<div class="ed-empty">Sem edições anteriores</div>')+'</div>';}
 function edPickHTML(kind){var e=edDates[kind].filter(function(x){return x.name===edCur[kind];})[0];var cd=(e&&e.date)||(edDates[kind][0]&&edDates[kind][0].date)||'';var lbl=cd?cd.split('-').reverse().join('/'):'edições';return '<div class="ed-pick"><button class="btn btn-sm" onclick="calToggle(\''+kind+'\')">📅 '+lbl+' ▾</button>'+(calOpen[kind]?edCalHTML(kind):'')+'</div>';}
-function didFontesHTML(o){var fontes=(o.fontes&&o.fontes.length)?o.fontes:(o.fonte?[{nome:o.fonte,url:o.url||'#'}]:[]);return fontes.length?'<div class="src">Fonte: '+fontes.map(function(f){return '<a href="'+(f.url||'#')+'" target="_blank" rel="noopener">'+esc(f.nome)+'</a>';}).join(' · ')+'</div>':'';}
-/** Item de lead/resumo_executivo pode vir string (forma antiga) OU objeto {t|texto|titulo|resumo|html} (rotinas de nuvem). Retorna sempre a STRING HTML — nunca "[object Object]". */
-function leadTxt(x){return (x==null)?'':(typeof x==='string'?x:(x.t||x.texto||x.titulo||x.resumo||x.html||''));}
-function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>Sumário Executivo</h2><ul>'+lead.map(function(x){return '<li>'+leadTxt(x)+'</li>';}).join('')+'</ul></div>':'';}
+/** URL de fonte para dentro de href="". A URL é o campo MAIS literalmente copiado da web em todo
+ *  o JSON (a rotina de nuvem transcreve o link da matéria). Sem escape, uma aspa fecha o atributo
+ *  e o resto vira `onmouseover=`; e `javascript:`/`data:` executam sem precisar de aspa nenhuma.
+ *  Só http(s) passa — qualquer outro esquema vira '#'. */
+function srcHref(u){var s=String(u==null?'':u).trim();
+  if(!/^https?:\/\//i.test(s))return '#';
+  return esc(s);}
+function didFontesHTML(o){var fontes=(o.fontes&&o.fontes.length)?o.fontes:(o.fonte?[{nome:o.fonte,url:o.url||'#'}]:[]);return fontes.length?'<div class="src">Fonte: '+fontes.map(function(f){return '<a href="'+srcHref(f.url)+'" target="_blank" rel="noopener">'+esc(f.nome)+'</a>';}).join(' · ')+'</div>':'';}
+/** Texto de corpo do DID/MIR que é HTML POR DESIGN (as rotinas mandam <b> no lead e no resumo).
+ *  ALLOWLIST: escapa tudo e devolve só as tags de ênfase, sem atributo nenhum. Um `<b onclick=x>`
+ *  não casa o padrão e permanece escapado; `<img onerror=…>` idem.
+ *  Por que importa: o conteúdo vem da WEB (título/resumo de notícia) via um LLM — que reproduz
+ *  markup do fonte e é ele próprio injetável. `REGRAS.md`: conteúdo externo não é confiável.
+ *  E o custo de um XSS aqui não é defacement: o `hub_token` vive no localStorage da MESMA origem
+ *  e o PWA não tem CSP — markup executado rouba a credencial de agenda/saúde/config.
+ *  Aplicar em quem renderiza CRU; NÃO usar junto de `esc()` (o `monitorar` já escapa e é texto puro). */
+function leadSafe(s){
+  return esc(String(s==null?'':s)).replace(/&lt;(\/?)(b|i|em|strong|br)\s*\/?&gt;/gi,function(m,c,t){return '<'+c+t.toLowerCase()+'>';});
+}
+/** Item de lead/resumo_executivo/monitorar pode vir string (forma antiga) OU objeto (rotinas de
+ *  nuvem). Chaves conhecidas primeiro; DEPOIS, qualquer string não-vazia do objeto.
+ *  O fallback existe porque a lista fechada de chaves JÁ FALHOU EM PRODUÇÃO: o "O que monitorar"
+ *  saiu com 5 bullets VAZIOS em 03, 04 e 06/08 — a nuvem gravou {item,data} e {catalisador,data},
+ *  nomes fora da lista, e o dado estava íntegro no JSON, só invisível. Texto some calado é pior
+ *  que texto feio: preferimos exibir o valor sob um nome inesperado a exibir nada. */
+function leadTxt(x){
+  if(x==null)return '';
+  if(typeof x==='string')return x;
+  if(typeof x!=='object')return String(x);
+  var v=(x.t||x.texto||x.titulo||x.resumo||x.html||'');
+  if(v)return v;
+  for(var k in x){ if(!Object.prototype.hasOwnProperty.call(x,k))continue;
+    if(k==='data'||k==='date')continue;                     /* data tem render próprio */
+    if(typeof x[k]==='string'&&x[k].trim())return x[k]; }
+  return '';
+}
+/** Data do item de "monitorar" (a nuvem manda `data`, às vezes ISO, às vezes já embutida no texto).
+ *  Só prefixa quando NÃO está no texto — senão sai "5/8 — 5/8 — …". */
+function monTxt(x){
+  var t=leadTxt(x);
+  var d=(x&&typeof x==='object')?(x.data||x.date||''):'';
+  if(!d||!t)return t||'';
+  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  var lbl=m?(String(+m[3])+'/'+String(+m[2])):d;
+  return (t.indexOf(lbl)>=0)?t:(lbl+' — '+t);
+}
+function didLeadHTML(lead){return (lead&&lead.length)?'<div class="lead"><h2>Sumário Executivo</h2><ul>'+lead.map(function(x){return '<li>'+leadSafe(leadTxt(x))+'</li>';}).join('')+'</ul></div>':'';}
 function didSecHTML(secoes){return '<div class="did-secs">'+(secoes||[]).map(function(s){return '<h2 class="sec">'+esc(s.nome)+'</h2><div class="blk '+(s.id||'')+'">'+(s.feeds?'<div class="feeds">'+s.feeds+'</div>':'')+((s.tickers&&s.tickers.length)?didTickerHTML(s.tickers,'tk-mini',''):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';}).join('')+'</div>';}
 function didLeituraHTML(L){if(!L)return '';return '<div class="leitura"><div class="leitura-tag">'+esc(L.rotulo||'📚 Leitura do dia')+(L.assunto?' · <span>'+esc(L.assunto)+'</span>':'')+'</div><h4>'+esc(L.titulo||'')+'</h4><p>'+esc(L.resumo||'')+'</p>'+(L.porque?'<div class="why"><b>Por que importa:</b> '+esc(L.porque)+'</div>':'')+didFontesHTML(L)+'</div>';}
 function didTickerHTML(arr,cls,lab){if(!arr||!arr.length)return '';return '<div class="ticker'+(cls?' '+cls:'')+'">'+(lab?'<div class="tk tk-lab">'+esc(lab)+'</div>':'')+arr.map(function(t){return '<div class="tk"><span class="s">'+esc(t.s)+'</span><span class="v">'+esc(t.v)+(t.d?' <span class="'+t.d+'">'+(t.d==='up'?'▲':'▼')+'</span>':'')+'</span></div>';}).join('')+'</div>';}
@@ -4442,7 +4485,7 @@ function didExportBodyHTML(d){
   h+=didTkStripHTML(d.ticker);
   h+='<div class="wrap">';
   if(d.cruzamento&&d.cruzamento.length)h+='<div class="cz-export"><h2 class="sec">🔀 O Cruzamento — Saúde × Mercado</h2>'+d.cruzamento.map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(stripPj(it.resumo||''))+'</p>'+(it.porque?'<div class="why"><b>A leitura:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';
-  if(lead&&lead.length)h+='<h2 class="sec">Sumário Executivo</h2><div class="lead"><ul>'+lead.map(function(x){return '<li>'+stripPj(leadTxt(x))+'</li>';}).join('')+'</ul></div>';
+  if(lead&&lead.length)h+='<h2 class="sec">Sumário Executivo</h2><div class="lead"><ul>'+lead.map(function(x){return '<li>'+leadSafe(stripPj(leadTxt(x)))+'</li>';}).join('')+'</ul></div>';
   (secoes||[]).forEach(function(s){
     if(/saude/i.test(s.id||''))return;   // saúde não entra como seção — vai só como teaser-ponte
     h+='<h2 class="sec">'+esc(s.nome)+'</h2><div class="blk '+(s.id||'')+'">'+((s.tickers&&s.tickers.length)?didTkStripHTML(s.tickers,'sec-tk'):'')+(s.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';
@@ -4519,11 +4562,16 @@ function mirBodyHTML(d){
   h+='<h2 class="sec">Dashboard de mercado — saúde</h2><div class="tk-grid">'+(d.tickers||[]).map(function(b){return '<div class="tk-blk"><h4>'+esc(b.bloco)+'</h4>'+(b.itens||[]).map(function(t){var c=t.d==='up'?'up':(t.d==='down'?'down':'');var ar=t.d==='up'?'▲':(t.d==='down'?'▼':'');return '<div class="tk-row"><span class="tk-lbl"><span class="tk-s">'+esc(t.s)+'</span><span class="tk-nm">'+esc(t.n||'')+'</span></span><span class="tk-v '+c+'">'+esc(t.v)+(ar?' '+ar:'')+'</span></div>';}).join('')+'</div>';}).join('')+'</div>';
   if(d.top_movers){var up=(d.top_movers.up||[]).map(function(t){return '<span class="up">'+esc(t.s)+' '+esc(t.v)+'</span>';}).join(', ');var dn=(d.top_movers.down||[]).map(function(t){return '<span class="down">'+esc(t.s)+' '+esc(t.v)+'</span>';}).join(', ');h+='<p class="movers">'+(d.tickers_nota?esc(d.tickers_nota)+' ':'')+(up?'<b>Altas:</b> '+up+'. ':'')+(dn?'<b>Baixas:</b> '+dn+'.':'')+'</p>';}
   else if(d.tickers_nota)h+='<p class="movers">'+esc(d.tickers_nota)+'</p>';
-  h+='<h2 class="sec">Panorama executivo</h2><div class="exec"><ul>'+(d.resumo_executivo||[]).map(function(x){return '<li>'+leadTxt(x)+'</li>';}).join('')+'</ul></div>';
+  h+='<h2 class="sec">Panorama executivo</h2><div class="exec"><ul>'+(d.resumo_executivo||[]).map(function(x){return '<li>'+leadSafe(leadTxt(x))+'</li>';}).join('')+'</ul></div>';
   h+='<div class="senti">'+(d.sentimento||[]).map(function(s){var b=s.nota==='+'?'b-pos':(s.nota==='-'?'b-neg':'b-neu');var lbl=s.nota_txt?String(s.nota_txt).toUpperCase():(s.nota==='+'?'POSITIVO':(s.nota==='-'?'NEGATIVO':'NEUTRO'));return '<div class="s-card"><div class="s-top"><span class="s-name">'+esc(s.setor)+'</span><span class="badge '+b+'">'+esc(lbl)+'</span></div><div class="s-why">'+esc(s.porque||'')+'</div></div>';}).join('')+'</div>';
   (d.abas||[]).forEach(function(a){h+='<h2 class="sec">'+esc(a.nome)+'</h2><div class="blk '+(a.id||'')+'">'+(a.itens||[]).map(function(it){return '<div class="item"><h4>'+esc(it.titulo)+'</h4><p>'+esc(it.resumo||'')+'</p>'+(it.porque?'<div class="why"><b>Por que importa:</b> '+esc(it.porque)+'</div>':'')+didFontesHTML(it)+'</div>';}).join('')+'</div>';});
   if(d.leitura&&d.leitura.length){h+='<h2 class="sec">📚 Ciência &amp; Leitura</h2>'+d.leitura.map(function(L){return '<div class="leitura"><span class="tag">Leitura do dia · via PubMed</span><h4>'+esc(L.titulo)+'</h4><p>'+esc(L.resumo||'')+'</p>'+(L.porque?'<div class="why"><b>Por que importa:</b> '+esc(L.porque)+'</div>':'')+didFontesHTML(L)+'</div>';}).join('');}
-  if(d.monitorar&&d.monitorar.length)h+='<h2 class="sec">🎯 O que monitorar</h2><div class="mon"><ul>'+d.monitorar.map(function(x){return '<li>'+esc(leadTxt(x))+'</li>';}).join('')+'</ul></div>';
+  /* Só emite o <li> que TEM texto: bullet vazio é pior que item a menos — anuncia falha sem dizer qual.
+     E se nenhum sobrar, o bloco inteiro não sai (título órfão com lista vazia era o sintoma de 04 e 06/08). */
+  if(d.monitorar&&d.monitorar.length){
+    var mon=d.monitorar.map(monTxt).filter(function(t){return t&&t.trim();});
+    if(mon.length)h+='<h2 class="sec">🎯 O que monitorar</h2><div class="mon"><ul>'+mon.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+'</ul></div>';
+  }
   h+='</div>';
   h+='<footer><b>MIR Health</b> — Market Insight Report on Health · '+esc(d.publisher||'IHB Strategies')+' · Edição de '+esc(dl)+' · '+esc(d.local||'São Paulo')+'.'+(d.note?'<br>'+esc(d.note):'')+'</footer>';
   return h;
