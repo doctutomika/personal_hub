@@ -829,6 +829,101 @@ a{color:inherit}
   .sau-ready-grid{flex-direction:column;gap:14px}
 }
 
+/* ===== PLANO DE TREINO (Saúde › Treinos) =====
+   Portado do protótipo do plano — mesmos tokens (--ind0/--gold/--line/--ind-soft/--saude),
+   prefixo `pl-` próprio para não colidir com o `.blk` do DID.
+   ⚠️ Esta é a tela do VESTIÁRIO: lida em pé, num aparelho de ~430px. A tabela larga é
+   aceitável no desktop; abaixo de 620px ela VIRA CARTÃO EMPILHADO (regra no fim do bloco),
+   porque rolar de lado com o polegar entre séries é o que mata a tela na prática.
+   O `.pl-tw` mantém overflow-x:auto assim mesmo: é ele que garante que qualquer conteúdo
+   largo role DENTRO do card e a PÁGINA nunca ganhe rolagem horizontal. */
+/* Card-acordeão da série: cabeçalho SEMPRE visível, corpo recolhível (fechado por padrão).
+   O cabeçalho é uma grade de 2 linhas em QUALQUER largura — linha 1: seta · nome · ✎ ·
+   linha 2: os chips de duração. Deixar os chips disputarem a linha 1 daria um layout que muda
+   de forma conforme o tamanho do nome, e o ⚠️ trocar (que é o último chip) seria o primeiro a
+   sumir justo quando mais importa. */
+.pl-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pl-acc{border-top:1px solid var(--line)}
+.pl-acc:first-of-type{border-top:0}
+.pl-acc-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;cursor:pointer}
+.pl-acc-h:focus-visible{outline:2px solid var(--ind2);outline-offset:2px;border-radius:6px}
+.pl-acc-c{color:var(--muted);font-size:11px;flex:0 0 12px}
+.pl-acc-t{flex:1 1 auto;min-width:0;font-family:var(--serif);font-size:15.5px;font-weight:700;color:var(--ind0);overflow-wrap:anywhere}
+.pl-acc-ed{flex:0 0 auto;width:28px;height:28px;font-size:13px}
+.pl-acc-k{flex:0 0 100%;margin-left:20px}   /* alinha os chips sob o nome, não sob a seta */
+.pl-acc-b{padding:2px 0 14px}
+.pl-kpis{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.pl-kpi{font-size:11px;color:var(--muted);background:var(--ind-soft);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pl-kpi b{color:var(--ind1);font-variant-numeric:tabular-nums}
+.pl-kpi.warn{background:#FDF3E0;color:#9A6510;font-weight:700}
+.pl-dias{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.pl-dia{border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:700;font-size:12.5px;
+  padding:6px 13px;border-radius:999px;display:inline-block}
+.pl-dia.active{background:var(--ind2);border-color:var(--ind2);color:#fff}
+.pl-blk{border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.pl-blk:last-child{margin-bottom:0}
+.pl-blk-h{display:flex;align-items:center;gap:9px;padding:9px 12px;background:#FAFBFE;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pl-blk-n{width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:var(--ind2);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.pl-blk-t{font-weight:800;font-size:13px;color:var(--ind0);overflow-wrap:anywhere;min-width:0}
+.pl-blk-m{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
+.pl-blk.warm .pl-blk-n{background:var(--muted)}
+.pl-blk.power .pl-blk-n{background:var(--gold);color:#3a2a06}
+.pl-blk.foco .pl-blk-n{background:var(--ind1)}
+.pl-blk.comp .pl-blk-n{background:var(--consult)}
+.pl-blk.biset .pl-blk-n{background:var(--saude)}
+.pl-tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pl-tb{border-collapse:collapse;width:100%;font-size:13px;min-width:620px}
+.pl-tb th{background:var(--ind-soft);color:var(--ind0);font-size:10px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.pl-tb td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+.pl-tb tr:last-child td{border-bottom:none}
+.pl-tb tbody tr:nth-child(even){background:#FAFBFE}
+.pl-tb td.num,.pl-tb th.num{text-align:center;white-space:nowrap}
+.pl-ex{font-weight:700;display:block}
+.pl-alias{color:var(--muted);font-size:11px;font-style:italic;display:block;margin-top:2px}
+.pl-obs{color:var(--muted);font-size:12px}
+.pl-src{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.4;resize:vertical}
+.pl-prev{border-left:3px solid var(--ind2);background:var(--ind-soft);padding:10px 13px;border-radius:0 var(--r-sm) var(--r-sm) 0;
+  margin-top:10px;font-size:13px}
+.pl-prev.err{border-color:var(--miss);background:var(--missbg)}
+.pl-prev-t{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ind0);overflow-wrap:anywhere}
+.pl-prev-l{font-size:12px;color:var(--muted);margin:2px 0 8px}
+.pl-prev-w{font-size:12.5px;margin-top:6px;overflow-wrap:anywhere}
+.pl-prev-w.err{color:var(--miss)}
+.pl-prev-ul{margin:4px 0 0 18px;font-size:12.5px}
+/* Cartão empilhado: abaixo daqui a tabela deixa de ser tabela. Cada linha vira um cartão e
+   cada célula ganha o próprio rótulo (data-l), então nada rola de lado com o polegar. */
+@media (max-width:620px){
+  .pl-tb{min-width:0;display:block;font-size:13px}
+  .pl-tb thead{display:none}
+  .pl-tb tbody,.pl-tb tr,.pl-tb td{display:block;width:auto}
+  .pl-tb tr{border-bottom:1px solid var(--line);padding:9px 11px}
+  .pl-tb tr:last-child{border-bottom:none}
+  .pl-tb td{border:none;padding:2px 0}
+  .pl-tb td.num{text-align:left;white-space:normal}
+  /* O seletor NÃO casa o texto do rótulo (que é acentuado e mudaria com a redação): casa a
+     PRESENÇA do data-l, menos a célula do nome do exercício, que é o título do cartão. */
+  .pl-tb td[data-l]:not(.pl-td-ex){display:flex;gap:7px;align-items:baseline;min-width:0}
+  .pl-tb td[data-l]:not(.pl-td-ex)::before{
+    content:attr(data-l);flex:0 0 68px;font-size:9.5px;font-weight:800;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--muted);line-height:1.6}
+  .pl-tb td[data-l]:not(.pl-td-ex)>*{min-width:0}
+  /* Célula sem valor não vira rótulo órfão: um exercício sem `obs` pintava "EXECUÇÃO" seguido de
+     nada (19px de altura morta). DEPOIS do `:not(.pl-td-ex)` DE PROPÓSITO: as duas regras têm a
+     MESMA especificidade (0,3,1) e, empatadas, vence a última na ordem de fonte — com esta acima,
+     o `display:flex` sobrescrevia o `display:none` e a correção não valia nada (QA provou por
+     cascata). Não troque a ordem nem acrescente regra de `td[data-l]` abaixo desta linha. */
+  .pl-tb td[data-l]:empty{display:none}
+  .pl-tb td.pl-td-ex{padding-bottom:4px}
+  .pl-blk-m{margin-left:0;flex-basis:100%}
+  .pl-kpis{margin-left:0}
+  /* 430px: os chips não podem empurrar largura. Sem margem de recuo eles ganham a linha
+     inteira, e cada chip quebra sozinho em vez de estourar o card. */
+  .pl-acc-k{margin-left:0}
+  .pl-acc-t{font-size:14.5px}
+}
+
 /* ===== IMPRESSÃO (Exportar PDF do MIR): isola o #view, esconde a casca ===== */
 @media print{
   .sidebar,.nav-ov,.topbar,#hubSync,.toast,.overlay,.no-print,.mir-bar,.did-bar,.ed-bar{display:none!important}
@@ -867,7 +962,7 @@ a{color:inherit}
 (function(){
   var API=localStorage.getItem('hub_api')||"https://script.google.com/macros/s/AKfycbz6TgZmviSz3JJkx38rN9Jfryw_N98IYS5cMW5R2YaSpkJPJiyW3ak1jAE8mmBOP2ij9w/exec";
   var TOKEN=localStorage.getItem('hub_token')||'';
-  var EMPTY={config:[],events:[],locations:{},readiness:[],jogos:[],lesoes:[]};
+  var EMPTY={config:[],events:[],locations:{},readiness:[],jogos:[],lesoes:[],planos:[]};
   function cget(k,def){try{var v=localStorage.getItem('hub_c_'+k);return v?JSON.parse(v):def;}catch(e){return def;}}
   function cset(k,v){try{localStorage.setItem('hub_c_'+k,JSON.stringify(v));}catch(e){}}
   function on(){return navigator.onLine!==false;}
@@ -887,7 +982,7 @@ a{color:inherit}
      atropelariam. O campo act guarda a ação real quando a chave difere dela. */
   function queue(a,data,key){var p=pend();p[key||a]={act:a,data:data};setPend(p);badge();}
   function readyUp(arr,rec){arr=(arr||[]).slice();for(var i=0;i<arr.length;i++){if(arr[i].date===rec.date){arr[i]=rec;return arr;}}arr.push(rec);return arr;}
-  function applyPending(d){var p=pend();if(p.saveEvents)d.events=p.saveEvents.data;if(p.saveConfig)d.config=p.saveConfig.data;if(p.saveJogos)d.jogos=p.saveJogos.data;if(p.saveLesoes)d.lesoes=p.saveLesoes.data;if(p.saveLocations){var m={};(p.saveLocations.data||[]).forEach(function(r){m[r.date]=r.loc;});d.locations=m;}
+  function applyPending(d){var p=pend();if(p.saveEvents)d.events=p.saveEvents.data;if(p.saveConfig)d.config=p.saveConfig.data;if(p.saveJogos)d.jogos=p.saveJogos.data;if(p.saveLesoes)d.lesoes=p.saveLesoes.data;if(p.savePlanos)d.planos=p.savePlanos.data;if(p.saveLocations){var m={};(p.saveLocations.data||[]).forEach(function(r){m[r.date]=r.loc;});d.locations=m;}
     Object.keys(p).forEach(function(k){var e=p[k];if((e.act||k)==='saveReadiness'&&e.data&&e.data.date)d.readiness=readyUp(d.readiness||[],e.data);});
     return d;}
   /* Ponto manual sobre a série do relógio: o MANUAL ganha na mesma data+métrica — a MESMA
@@ -929,6 +1024,7 @@ a{color:inherit}
     saveReadiness:function(d){if(!d||!d.date)return {error:'data inválida'};var b=cget('bootstrap',EMPTY);b.readiness=readyUp(b.readiness||[],d);cset('bootstrap',b);queue('saveReadiness',d,'saveReadiness:'+d.date);flush();return {ok:true,date:d.date};},
     saveAllJogos:function(a){var b=cget('bootstrap',EMPTY);b.jogos=a;cset('bootstrap',b);queue('saveJogos',a);flush();return true;},
     saveAllLesoes:function(a){var b=cget('bootstrap',EMPTY);b.lesoes=a;cset('bootstrap',b);queue('saveLesoes',a);flush();return true;},
+    saveAllPlanos:function(a){var b=cget('bootstrap',EMPTY);b.planos=a;cset('bootstrap',b);queue('savePlanos',a);flush();return true;},
     /* Peso manual: upsert por dia+métrica → chave PRÓPRIA na fila, senão dois dias
        registrados offline se atropelariam (mesma razão do saveReadiness:<data>).
        Valida igual ao backend (HUB_SAUDE_MANUAL_) p/ errar antes de enfileirar. */
@@ -958,7 +1054,7 @@ a{color:inherit}
 })();
 
 /* SemVer X.Y.Z — bump pelo hub-release; ver CLAUDE.md. Rodapé + clasp -d usam este número. */
-var APP_VERSION='3.17.2';
+var APP_VERSION='3.18.0';
 /* ============================ DADOS / SEED ============================ */
 var MARK='<defs><radialGradient id="sbg" cx="34%" cy="50%" r="80%"><stop offset="0%" stop-color="#CDD1EC"/><stop offset="100%" stop-color="#B9BFE0"/></radialGradient></defs><rect x="4" y="4" width="112" height="112" rx="26" fill="url(#sbg)" stroke="#A9AFD6" stroke-width="1.5"/>__FAN__<circle cx="34" cy="60" r="6.2" fill="#23286B"/>';
 (function buildMark(){
@@ -974,6 +1070,7 @@ var DID={};
 var CFG=[],EVENTS=[],LOCS={},READINESS=[];   /* READINESS: check-ins diários (1 por dia, chave=date) */
 var JOGOS=[];     /* partidas (aba própria): 1 linha por jogo; evento_id é opcional */
 var LESOES=[];    /* lesões (aba própria): registro clínico; status ativa/recuperada; evento_id opcional */
+var PLANOS=[];    /* plano de treino (aba própria): 1 linha = 1 exercício; serie_id → item cat:'serie' */
 var WX={};        /* previsão por dia: { 'AAAA-MM-DD': {tmax,tmin,icon,desc,pop} } */
 var WXMETA=null;  /* { local, updatedAt } */
 function wxLoad(){ api('getWeather').then(function(w){ WX={}; WXMETA=null; if(w&&w.dias){ (w.dias||[]).forEach(function(d){ if(d&&d.date)WX[d.date]=d; }); WXMETA={local:w.local||'',updatedAt:w.updatedAt||''}; if(page==='agenda')renderAgenda(); else if(page==='home')renderHome(); } }).catch(function(){}); }
@@ -986,6 +1083,7 @@ function saveCfg(){api('saveAllConfig',CFG).catch(function(){toast('Falha ao sal
 function saveEv(){api('saveAllEvents',EVENTS).catch(function(){toast('Falha ao salvar');});}
 function saveJogos(){api('saveAllJogos',JOGOS).catch(function(){toast('Falha ao salvar o jogo');});}
 function saveLesoes(){api('saveAllLesoes',LESOES).catch(function(){toast('Falha ao salvar a lesão');});}
+function savePlanos(){api('saveAllPlanos',PLANOS).catch(function(){toast('Falha ao salvar o plano');});}
 /* Check-in de recuperação: registro do dia (ou null). Campo em branco = '' (opcional, nunca 0). */
 function readinessOf(iso){for(var i=0;i<READINESS.length;i++)if(READINESS[i].date===iso)return READINESS[i];return null;}
 /** Número da planilha → Number ou null (distingue "vazio" de 0 — RPE 0 é valor legítimo). */
@@ -995,7 +1093,7 @@ function saveLocs(){var a=Object.keys(LOCS).filter(function(k){return LOCS[k];})
 function getLoc(iso){return LOCS[iso]||'';}
 function setLoc(iso,v){if(v)LOCS[iso]=v;else delete LOCS[iso];saveLocs();renderAgenda();}
 function locSelect(iso,cur){return '<select class="locsel" title="Local (gerencie em Sistema)" onclick="event.stopPropagation()" onchange="setLoc(\''+iso+'\',this.value)"><option value="">· local</option>'+locOptgroups(cur)+'</select>';}
-function load(){var v=document.getElementById('view');if(v)v.innerHTML='<div style="padding:48px;text-align:center;color:#6B7088">Carregando…</div>';api('getBootstrap').then(function(d){CFG=(d&&d.config)||[];EVENTS=(d&&d.events)||[];LOCS=(d&&d.locations)||{};READINESS=(d&&d.readiness)||[];JOGOS=(d&&d.jogos)||[];LESOES=(d&&d.lesoes)||[];if(dedupEventIds())saveEv();render();wxLoad();}).catch(function(e){var vv=document.getElementById('view');if(vv)vv.innerHTML='<div class="card">Erro ao carregar: '+((e&&e.message)||e)+'</div>';});}
+function load(){var v=document.getElementById('view');if(v)v.innerHTML='<div style="padding:48px;text-align:center;color:#6B7088">Carregando…</div>';api('getBootstrap').then(function(d){CFG=(d&&d.config)||[];EVENTS=(d&&d.events)||[];LOCS=(d&&d.locations)||{};READINESS=(d&&d.readiness)||[];JOGOS=(d&&d.jogos)||[];LESOES=(d&&d.lesoes)||[];PLANOS=(d&&d.planos)||[];if(dedupEventIds())saveEv();render();wxLoad();}).catch(function(e){var vv=document.getElementById('view');if(vv)vv.innerHTML='<div class="card">Erro ao carregar: '+((e&&e.message)||e)+'</div>';});}
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&refreshToday()&&page==='agenda')renderAgenda(); });
 function reloadAgenda(){toast('Atualizando…');
   api('pullAgenda').then(function(r){if(r&&r.events)EVENTS=r.events;renderAgenda();
@@ -1869,7 +1967,10 @@ function saudeLoad(){
 /** Falhou (offline/sem token)? Deixa tentar de novo — senão o card fica "Carregando…" p/ sempre. */
 function saudeRetry(){saudeTry=false;saudeErr=false;saudeLoad();saudeRepaint();}
 /** Repinta a tela que depende do baseline (chamada 1x, quando o fetch volta). */
-function saudeRepaint(){if(page==='ind')renderInd();else if(page==='home')renderHome();else if(page==='saude')renderSaude();}
+/* Só repinta quem de fato depende do baseline. Na Saúde isso é a sub-aba Hoje: repintar a
+   página inteira enquanto ele lê o plano no vestiário jogaria o scroll para o topo por causa
+   de um fetch que aquela sub-aba nem usa. */
+function saudeRepaint(){if(page==='ind')renderInd();else if(page==='home')renderHome();else if(page==='saude'&&saudeTab==='hoje')renderSaude();}
 /** Invalida o cache e busca de novo (depois de gravar peso: a precedência
  *  manual×relógio quem resolve é o backend — refazer a conta aqui seria uma 2ª
  *  implementação da mesma regra, pronta pra divergir). */
@@ -2717,27 +2818,41 @@ function saudeReguaBloco(){
 /** '13/07 seg' — rótulo curto de data para as listas desta página. */
 function dLbl(iso){var d=parseISO(iso);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+DOW[(d.getDay()+6)%7].slice(0,3).toLowerCase();}
 
-/* Ordem da página (aprovada pelo dono): AÇÃO em cima, REGISTRO embaixo.
- *  1 prontidão + insights  → consolidação em ação
- *  2 lesões                → alerta (ativas primeiro)
- *  3 régua                 → as leituras (editável via check-in)
- *  4 treinos               → cards do que foi feito
- *  5 registro de peso      → entrada manual (peso + hora)
- *  6 jogos                 → partidas */
+/* SUB-ABAS (mesmo padrão do indTab dos Indicadores). A página empilhava sete blocos numa
+ * rolagem só; com o plano de treino somado ela deixa de ser navegável justo no celular, que é
+ * onde ela é lida. Divisão por MOMENTO DE USO, não por tipo de dado:
+ *  · Hoje    → prontidão + leitura da rodada + régua + registro de peso (o que ele abre de manhã)
+ *  · Treinos → plano da série ativa, sessões feitas, jogos e o histórico das encerradas (vestiário)
+ *  · Lesões  → o registro clínico, com o filtro que já existia
+ * Os repaints por bloco (prefixos sauTr, sauLs e plano) continuam valendo: nenhum deles volta
+ * a reconstruir a página inteira, senão o scroll pula. */
+var saudeTab='hoje';
+function saudeSetTab(t){saudeTab=t;renderSaude();}
 function renderSaude(){
   saudeLoad(); saudeInsLoad();
   var h='<div class="page-head"><h1>Saúde</h1><div class="sub">Seu registro, seus treinos e o que o relógio mede</div></div>';
-  h+=saudeProntidaoBloco();  // 1 prontidão de hoje (risco + ACWR + insight; guard saudeOk)
-  h+=saudeInsHTML();         // 1 leitura da rodada da nuvem (some limpo enquanto não existe)
-  h+=saudeLesoesHTML();      // 2 registro de lesões (boneco + EVA + status)
-  h+=saudeReguaBloco();      // 3 régua — onde ele está na própria baseline
-  h+=saudeTreinosHTML();     // 4 treinos feitos em cards (RPE/sensação/anotação/lesão)
-  h+=saudePerfilCard();      // 5 registro de peso (+ hora) + IMC calculado
-  h+=saudeJogosHTML();       // 6 partidas
+  h+='<div class="sys-tabs">'+[['hoje','🩺 Hoje'],['treinos','🏋️ Treinos'],['lesoes','🩹 Lesões']].map(function(t){
+    return '<button class="sys-tab'+(saudeTab===t[0]?' active':'')+'" onclick="saudeSetTab(\''+t[0]+'\')">'+t[1]+'</button>';
+  }).join('')+'</div>';
+  var b='';
+  if(saudeTab==='treinos'){
+    /* Sessões ANTES do plano: é o que ele consulta com mais frequência (decisão do dono).
+       O plano é um bloco só, com filtro ativas|encerradas — não há bloco de histórico. */
+    b+=saudeTreinosHTML();     // sessões feitas em cards (RPE/sensação/anotação/lesão)
+    b+=saudePlanoHTML();       // planos em acordeão (dias A/B, blocos, ⧉ copiar, ✎)
+    b+=saudeJogosHTML();       // partidas
+  }else if(saudeTab==='lesoes'){
+    b+=saudeLesoesHTML();      // registro de lesões (boneco + EVA + status + filtro)
+  }else{
+    b+=saudeProntidaoBloco();  // prontidão de hoje (risco + ACWR + insight; guard saudeOk)
+    b+=saudeInsHTML();         // leitura da rodada da nuvem (some limpo enquanto não existe)
+    b+=saudeReguaBloco();      // régua — onde ele está na própria baseline
+    b+=saudePerfilCard();      // registro de peso (+ hora) + IMC calculado
+  }
   /* .flowpage = quem dá a distância entre os cards empilhados (ver Style.html).
      Sem ele, `.card` sem margin encosta no vizinho e o box-shadow vaza por cima. */
-  el('view').innerHTML='<div class="flowpage">'+h+'</div>';
-  spHoraInit();   // liga o drum-roll da hora do registro de peso (DOM já montado)
+  el('view').innerHTML=h+'<div class="flowpage">'+b+'</div>';
+  spHoraInit();   // liga o drum-roll da hora do registro de peso (DOM já montado; no-op fora do Hoje)
   spwInit();      // liga o drum-roll do peso (kg + decimal), idem
 }
 
@@ -3967,7 +4082,409 @@ function saveSerieItem(id){var v=el('sr_val').value.trim();if(!v){toast('Dê um 
   d.fim=el('sr_fim').value||'';
   if(st==='encerrada'&&!d.fim)d.fim=isoOf(TODAY);
   serieSetDts(l,d);
-  if(!id)CFG.push(l);saveCfg();closeModal();toast('Salvo');renderSys();}
+  if(!id)CFG.push(l);saveCfg();closeModal();toast('Salvo');renderSerieHost();}
+/** Repinta a tela CORRENTE depois de mexer numa série. Existe porque este MESMO modal agora é
+ *  aberto de dois lugares — Sistema › Séries de treino e o atalho ✎ do card da Saúde — e um
+ *  `renderSys()` fixo jogaria o usuário da Saúde para dentro do Sistema ao salvar. Não duplica
+ *  nem toca no formulário: só deixa de assumir de que página ele veio. */
+function renderSerieHost(){if(page==='saude')renderSaude();else renderSys();}
+
+/* ============================ PLANOS DE TREINO (aba `planos`) ============================
+ * O plano é DADO — nunca código. Nenhum exercício, carga, alias, observação ou nome de série
+ * mora neste arquivo: no cliente, código é publicação (CLAUDE.md). Tudo aqui é estrutura.
+ *
+ * 1 linha = 1 exercício. O BLOCO é o agrupamento por (`dia`,`bloco_n`) — NUNCA pelo texto de
+ * `bloco_titulo`, que pode repetir dentro do mesmo dia.
+ * A série continua sendo um item de config `cat:'serie'`; o plano só APONTA para ela via
+ * `serie_id`. Nada aqui toca no casamento por NOME que a agenda usa (evento `detalhe` × série)
+ * nem em serieSessoes()/serieInfo() — mudar isso quebraria agenda e contagem juntas. */
+var PLANO_TIPOS={warm:'Aquecimento',power:'Potência',foco:'Foco',comp:'Complemento',biset:'Bi-set'};
+/** ID de linha de plano GARANTIDAMENTE único: um import grava dezenas de linhas no mesmo
+ *  milissegundo, e Date.now() puro colidiria dentro do próprio laço. */
+function uniqPlanId(){var id;do{id='plan-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*1e7).toString(36);}while(PLANOS.some(function(p){return p.id===id;}));return id;}
+function planosDe(serieId){return PLANOS.filter(function(p){return p.serie_id===serieId;});}
+function planoDias(serieId){var seen={},out=[];planosDe(serieId).forEach(function(p){var d=String(p.dia||'');if(d&&!seen[d]){seen[d]=1;out.push(d);}});out.sort();return out;}
+/** Blocos de um dia, agrupados pela CHAVE (`bloco_n`); o título é só rótulo. */
+function planoBlocos(serieId,dia){
+  var map={},ordem=[];
+  planosDe(serieId).forEach(function(p){
+    if(String(p.dia||'')!==String(dia))return;
+    var n=Number(p.bloco_n)||0,k='b'+n;
+    if(!map[k]){map[k]={n:n,tipo:String(p.bloco_tipo||'').toLowerCase(),titulo:String(p.bloco_titulo||''),meta:String(p.bloco_meta||''),itens:[]};ordem.push(k);}
+    map[k].itens.push(p);
+  });
+  var bs=ordem.map(function(k){return map[k];});
+  bs.sort(function(a,b){return a.n-b.n;});
+  bs.forEach(function(b){b.itens.sort(function(x,y){return (Number(x.ordem)||0)-(Number(y.ordem)||0);});});
+  return bs;
+}
+/** Assinatura das linhas de um plano. É o que torna o import IDEMPOTENTE: colar duas vezes o
+ *  mesmo plano dá assinatura igual → no-op, sem duplicar série nem linhas. */
+function planoAssin(rows){
+  return rows.map(function(p){
+    return [p.dia,Number(p.bloco_n)||0,Number(p.ordem)||0,p.bloco_tipo,p.bloco_titulo,p.bloco_meta,p.ex,p.alias,p.sets,p.reps,p.carga,p.obs]
+      .map(function(v){return String(v==null?'':v).trim();}).join('\u0001');
+  }).join('\u0002');
+}
+
+/* ---- IMPORT: colar o plano cria a série + as linhas numa ação -------------------------
+ * Decisão de arquitetura (ver CLAUDE.md): a porta de entrada da série é a SAÚDE, porque o
+ * plano chega pronto de fora e já carrega nome/início/meta — pedir para digitar a série de novo
+ * em outra tela é redundância. Sistema › Séries de treino continua para manutenção/correção.
+ * Três salvaguardas, todas obrigatórias: PREVIEW antes de gravar · IDEMPOTÊNCIA · encerramento
+ * da(s) anterior(es) EXPLÍCITO e nominal, nunca silencioso. */
+
+/** Dialeto "objeto JS" (aspas simples, chave sem aspas, vírgula sobrando, comentários) → JSON.
+ *  É transformação de TEXTO, caractere a caractere: o app NUNCA executa o que foi colado —
+ *  eval/new Function num campo de colagem seria abrir o cliente para o que vier junto. */
+function planoToJson(src){
+  var s=String(src||'').replace(/^\s*(?:var|let|const)\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=\s*/,'').replace(/[\s;]+$/,'').replace(/^\s+/,'');
+  var out='',i=0,n=s.length,c,d,e,q,buf,j;
+  while(i<n){
+    c=s.charAt(i);
+    if(c==='/'&&s.charAt(i+1)==='*'){j=s.indexOf('*/',i+2);i=(j<0)?n:(j+2);continue;}
+    if(c==='/'&&s.charAt(i+1)==='/'){j=s.indexOf('\n',i);i=(j<0)?n:j;continue;}
+    if(c==='"'||c==='\''){
+      q=c;buf='';i++;
+      while(i<n){
+        d=s.charAt(i);
+        if(d==='\\'){e=s.charAt(i+1);
+          if(e==='\'')buf+='\'';            /* \' dentro de '...' é aspa literal, não escape JSON */
+          else if(e==='"')buf+='\\"';
+          else buf+='\\'+e;
+          i+=2;continue;}
+        if(d===q){i++;break;}
+        if(d==='"'){buf+='\\"';i++;continue;}
+        if(d==='\r'){i++;continue;}
+        if(d==='\n'){buf+='\\n';i++;continue;}
+        if(d==='\t'){buf+='\\t';i++;continue;}
+        buf+=d;i++;
+      }
+      out+='"'+buf+'"';continue;
+    }
+    if(/[A-Za-z_$]/.test(c)){                /* identificador: vira chave com aspas só se vier ':' */
+      buf='';while(i<n&&/[A-Za-z0-9_$]/.test(s.charAt(i))){buf+=s.charAt(i);i++;}
+      j=i;while(j<n&&/\s/.test(s.charAt(j)))j++;
+      out+=(s.charAt(j)===':')?('"'+buf+'"'):buf;
+      continue;
+    }
+    if(c===','){j=i+1;while(j<n&&/\s/.test(s.charAt(j)))j++;
+      if(s.charAt(j)==='}'||s.charAt(j)===']'){i++;continue;}}
+    out+=c;i++;
+  }
+  return out;
+}
+/** Texto colado → {erro} ou {nome,ini,fimPrev,meta,rows}. Só LÊ; não grava nada. */
+function planoParse(txt){
+  var o;
+  if(!String(txt||'').trim())return {erro:'Cole o plano na caixa acima.'};
+  try{o=JSON.parse(planoToJson(txt));}catch(e){return {erro:'Não consegui ler o plano: '+((e&&e.message)||e)};}
+  if(!o||typeof o!=='object'||Object.prototype.toString.call(o)==='[object Array]')return {erro:'O conteúdo colado não é um objeto de plano.'};
+  var nome=String(o.nome||'').trim();
+  if(!nome)return {erro:'Falta o campo "nome" da série.'};
+  var ini=String(o.ini||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(ini))return {erro:'Campo "ini" ausente ou fora do formato AAAA-MM-DD.'};
+  var fimPrev=/^\d{4}-\d{2}-\d{2}$/.test(String(o.fim||''))?String(o.fim):'';
+  var meta=parseInt(o.meta,10);
+  if(!meta&&fimPrev)meta=Math.round(daysBetween(ini,fimPrev)/7);
+  meta=Math.max(1,Math.min(52,meta||8));
+  var dias=o.dias;
+  if(!dias||!dias.length)return {erro:'Falta a lista "dias" com os treinos.'};
+  var rows=[],erro='',i,b,k;
+  for(i=0;i<dias.length&&!erro;i++){
+    var D=dias[i]||{},dia=String(D.id||'').trim();
+    if(!dia){erro='O dia #'+(i+1)+' está sem o campo "id".';break;}
+    var bs=D.blocos;
+    if(!bs||!bs.length){erro='O dia '+dia+' não tem "blocos".';break;}
+    for(b=0;b<bs.length&&!erro;b++){
+      var B=bs[b]||{},bn=parseInt(B.n,10);
+      if(!isFinite(bn))bn=b+1;              /* bloco sem `n`: cai na posição — a chave nunca fica vazia */
+      var its=B.itens;
+      if(!its||!its.length){erro='O bloco '+bn+' do dia '+dia+' não tem "itens".';break;}
+      for(k=0;k<its.length&&!erro;k++){
+        var it=its[k]||{};
+        if(!String(it.ex||'').trim()){erro='Um exercício do bloco '+bn+' (dia '+dia+') está sem o campo "ex".';break;}
+        /* `kg` na origem = `carga` na aba: renomeia AQUI, uma vez, na porta de entrada. */
+        var cg=(it.carga!=null&&it.carga!=='')?it.carga:it.kg;
+        rows.push({id:'',serie_id:'',dia:dia,bloco_n:bn,bloco_tipo:String(B.tipo||''),bloco_titulo:String(B.titulo||''),
+          bloco_meta:String(B.meta||''),ordem:k+1,ex:String(it.ex).trim(),alias:String(it.alias||''),
+          sets:String(it.sets==null?'':it.sets),reps:String(it.reps==null?'':it.reps),
+          /* obs com .trim(): o cartão empilhado esconde a célula por `td[data-l]:empty`, e
+             `:empty` NÃO casa se sobrar um espaço — o rótulo "EXECUÇÃO" ficaria órfão. */
+          carga:String(cg==null?'':cg),obs:String(it.obs||'').trim()});
+      }
+    }
+  }
+  if(erro)return {erro:erro};
+  if(!rows.length)return {erro:'O plano não tem nenhum exercício.'};
+  return {nome:nome,ini:ini,fimPrev:fimPrev,meta:meta,rows:rows};
+}
+/** O que o import FARIA com este plano, dado o estado atual. Não grava nada.
+ *  'novo'    → cria a série + as linhas, encerrando TODAS as ativas de hoje
+ *  'anexar'  → a série já existe e está SEM nenhuma linha de plano: só acrescenta as linhas.
+ *              Seguro por construção (não há o que sobrescrever) e é o caminho real de quem
+ *              criou a série à mão em Sistema antes de o plano existir. NÃO mexe em status,
+ *              datas nem meta da série: isso é decisão do dono, e automação preenche vazio —
+ *              nunca sobrescreve o que ele já decidiu.
+ *  'igual'   → já está no Hub, idêntico (idempotência: no-op — vale para os dois caminhos)
+ *  'colisao' → já existe série com esse nome e OUTRO conteúdo — falha, nunca sobrescreve
+ *  ⚠️ `encerrar` é uma LISTA, não um item: o dado real já teve mais de uma série ativa ao mesmo
+ *  tempo. Pegar "a primeira" e ignorar o resto encerraria em silêncio o que ficou de fora. */
+function planoImpStatus(p){
+  var alvo=null,ativas=[],chave=p.nome.toLowerCase();
+  series().forEach(function(l){
+    if(String(l.valor||'').trim().toLowerCase()===chave)alvo=l;
+    if((l.pai||'ativa')==='ativa')ativas.push(l);
+  });
+  if(alvo){
+    var atual=planosDe(alvo.id);
+    if(!atual.length)return {st:'anexar',serie:alvo,encerrar:[]};
+    if(planoAssin(atual)===planoAssin(p.rows))return {st:'igual',serie:alvo,encerrar:[]};
+    return {st:'colisao',serie:alvo,encerrar:[]};
+  }
+  return {st:'novo',serie:null,encerrar:ativas};
+}
+var PLANO_IMP=null;   /* preview em memória — nada vai para CFG/PLANOS antes do clique de confirmar */
+function openPlanoImport(){
+  PLANO_IMP=null;
+  openModal('<div class="modal-head"><h3>Importar plano de treino</h3><button class="x" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body"><div class="muted" style="font-size:12px;margin-bottom:8px">Cole o bloco de treino pronto (nome, início, meta e a lista de dias com blocos e exercícios). Uma ação cria a <b>série</b> e o <b>plano</b>. Nada é gravado antes de você conferir o resumo e confirmar.</div>'+
+    '<div class="field"><label>Plano (JSON)</label><textarea id="pl_src" class="pl-src" rows="8" spellcheck="false" placeholder="{ &quot;nome&quot;: …, &quot;ini&quot;: &quot;AAAA-MM-DD&quot;, &quot;meta&quot;: …, &quot;dias&quot;: [ … ] }"></textarea></div>'+
+    '<div id="pl_prev"></div></div>'+
+    '<div class="modal-foot"><button class="btn btn-sm btn-ghost" onclick="closeModal()">Cancelar</button>'+
+    '<div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="planoImpAnalisar()">Analisar</button>'+
+    '<button class="btn btn-sm btn-primary" id="pl_ok" disabled onclick="planoImpGravar()">Confirmar e gravar</button></div></div>');
+}
+function planoImpAnalisar(){
+  var box=el('pl_prev'),ok=el('pl_ok');
+  if(!box)return;
+  PLANO_IMP=null;if(ok)ok.disabled=true;
+  var r=planoParse(el('pl_src')?el('pl_src').value:'');
+  if(r.erro){box.innerHTML='<div class="pl-prev err">'+esc(r.erro)+'</div>';return;}
+  var s=planoImpStatus(r),dias=planoDiasDe(r.rows);
+  var h='<div class="pl-prev"><div class="pl-prev-t">'+esc(r.nome)+'</div>'+
+    '<div class="pl-prev-l">'+r.rows.length+(r.rows.length===1?' exercício':' exercícios')+' · '+
+    dias.length+(dias.length===1?' dia':' dias')+' ('+esc(dias.join(' · '))+') · meta de '+r.meta+' semanas · começa em '+esc(dLbl(r.ini))+'</div>';
+  if(s.st==='igual'){
+    h+='<div class="pl-prev-w">Este plano <b>já está no Hub</b>, idêntico. Nada a gravar.</div>';
+  }else if(s.st==='colisao'){
+    h+='<div class="pl-prev-w err">Já existe uma série chamada <b>'+esc(s.serie.valor)+'</b> com outro conteúdo. Não vou sobrescrevê-la. Renomeie o plano, ou ajuste/remova essa série em Sistema › Séries de treino, e tente de novo.</div>';
+  }else if(s.st==='anexar'){
+    /* VERBO DIFERENTE de propósito: descobrir depois que anexou achando que criou é exatamente
+       o tipo de surpresa que o preview existe para impedir. */
+    var dt=serieDts(s.serie),st=((s.serie.pai||'ativa')==='ativa')?'ativa':'encerrada';
+    h+='<div class="pl-prev-w"><b>Vou anexar</b> o plano à série que já existe <b>'+esc(s.serie.valor)+'</b> (hoje <b>sem plano</b>) — '+
+      r.rows.length+(r.rows.length===1?' exercício':' exercícios')+'. <b>Não vou criar</b> série nenhuma.</div>';
+    h+='<div class="pl-prev-w">A série fica como está: continua <b>'+st+'</b>, começando em '+esc(dt.ini?dLbl(dt.ini):'—')+
+      ', meta de '+dt.meta+' semanas e '+serieSessoes(s.serie.valor)+' sessões contadas. O início e a meta que vieram no plano são <b>ignorados</b> — quem manda é o que você já registrou em Sistema.</div>';
+    h+='<div class="pl-prev-w">Nenhuma outra série será encerrada.</div>';
+    PLANO_IMP=r;if(ok)ok.disabled=false;
+  }else{
+    h+='<div class="pl-prev-w"><b>Vou criar</b> a série <b>'+esc(r.nome)+'</b> com '+r.rows.length+(r.rows.length===1?' exercício':' exercícios')+'.</div>';
+    if(s.encerrar.length){
+      h+='<div class="pl-prev-w"><b>Vou encerrar</b> '+(s.encerrar.length===1?'a série ativa':('as '+s.encerrar.length+' séries ativas'))+
+        ' — só uma fica ativa por vez:<ul class="pl-prev-ul">'+s.encerrar.map(function(l){
+          return '<li>'+esc(l.valor)+' <span class="muted">('+serieSessoes(l.valor)+' sessões contadas — a contagem delas não se altera)</span></li>';
+        }).join('')+'</ul></div>';
+    }else{
+      h+='<div class="pl-prev-w">Nenhuma série ativa hoje — nada será encerrado.</div>';
+    }
+    PLANO_IMP=r;if(ok)ok.disabled=false;
+  }
+  box.innerHTML=h+'</div>';
+}
+/** Dias distintos de um conjunto de linhas (preview trabalha sobre linhas ainda não gravadas). */
+function planoDiasDe(rows){var seen={},out=[];rows.forEach(function(p){if(!seen[p.dia]){seen[p.dia]=1;out.push(p.dia);}});out.sort();return out;}
+function planoImpGravar(){
+  var r=PLANO_IMP;
+  if(!r){toast('Analise o plano antes de gravar');return;}
+  /* Revalida NA HORA de gravar: entre o preview e o clique o estado pode ter mudado (fila
+     offline subindo, outra aba). Preview que não reconfere é preview que mente. */
+  var s=planoImpStatus(r);
+  if(s.st!=='novo'&&s.st!=='anexar'){toast(s.st==='igual'?'Este plano já está no Hub':'Já existe uma série com esse nome');planoImpAnalisar();return;}
+  var alvo;
+  if(s.st==='anexar'){
+    /* Série existente e vazia de plano: SÓ acrescenta linhas. Status, datas e meta são decisão
+       do dono — automação preenche vazio, nunca sobrescreve o que ele já registrou. */
+    alvo=s.serie;
+  }else{
+    s.encerrar.forEach(function(l){serieApply(l,'encerrada');});   /* mesma transição do seletor de Sistema */
+    alvo={id:'serie-'+Date.now(),cat:'serie',valor:r.nome,cor:'',ordem:series().length+1,pai:'ativa',gov:'usuario'};
+    /* `fim` NASCE VAZIO mesmo quando o plano traz término previsto: no app `fim` é a data em que a
+       série FOI encerrada. Preenchê-lo numa série ativa congelaria serieSemanas() e apagaria o
+       alerta de trocar (serieInfo só alerta quando não há fim). O horizonte previsto vive na meta. */
+    serieSetDts(alvo,{ini:r.ini,fim:'',meta:r.meta});
+    CFG.push(alvo);
+  }
+  r.rows.forEach(function(row){
+    var o={},k;for(k in row)if(row.hasOwnProperty(k))o[k]=row[k];
+    o.id=uniqPlanId();o.serie_id=alvo.id;PLANOS.push(o);
+  });
+  if(s.st!=='anexar')saveCfg();   /* anexar não toca no config: nada a gravar lá */
+  savePlanos();
+  PLANO_IMP=null;PLANO_DIA={};closeModal();
+  toast((s.st==='anexar'?'Plano anexado a ':'Plano importado — ')+(s.st==='anexar'?alvo.valor:(r.rows.length+(r.rows.length===1?' exercício':' exercícios'))));
+  renderSaude();
+}
+
+/* ---- Leitura do plano (Saúde › Treinos) ---------------------------------------------
+ * É a tela do vestiário: lida em pé, no celular. UM bloco só, com filtro `ativas | encerradas`
+ * — o MESMO padrão do sauLs (lesões) e do sauTr (sessões), que o dono já usa. Não há bloco
+ * separado de histórico: a série encerrada é a mesma coisa com outro status.
+ * Cada série é um CARD-ACORDEÃO, FECHADO por padrão: aberta por inteiro, a página não cabia
+ * no polegar. O repaint é do MIOLO (sauPlPaint → #sauPlCard; planoSetDia → só o corpo aberto),
+ * nunca renderSaude() inteiro — reconstruir a página a cada clique faz o scroll pular. */
+var SAU_PL_ST='ativa';   /* filtro do bloco: 'ativa' | 'encerrada' — default nas ativas */
+var PLANO_OPEN='';       /* id da série expandida ('' = todas fechadas); uma de cada vez */
+var PLANO_DIA={};        /* dia aberto POR SÉRIE: {serieId:'A'} — nunca um global só */
+function sauPlSetSt(s){SAU_PL_ST=s;PLANO_OPEN='';sauPlPaint();}
+function sauPlPaint(){var n=el('sauPlCard');if(n)n.innerHTML=sauPlInnerHTML();else renderSaude();}
+function planoToggle(id){PLANO_OPEN=(PLANO_OPEN===id)?'':id;sauPlPaint();}
+function planoDiaDe(l){var ds=planoDias(l.id);if(!ds.length)return '';var cur=PLANO_DIA[l.id];for(var i=0;i<ds.length;i++)if(ds[i]===cur)return cur;return ds[0];}
+/** Troca de dia repinta SÓ o corpo aberto — o cabeçalho e os vizinhos não se mexem. */
+function planoSetDia(id,d){PLANO_DIA[id]=d;var l=cfgById(id),n=el('plBody_'+id);if(l&&n)n.innerHTML=planoBodyInner(l);else sauPlPaint();}
+/** 'DD/MM' — no cabeçalho o dia da semana do dLbl() só roubaria largura em 430px. */
+function dCurto(iso){var d=parseISO(iso);return pad(d.getDate())+'/'+pad(d.getMonth()+1);}
+/** Término PREVISTO = início + meta semanas. É DERIVADO: não lê nem grava `fim`, que no app é
+ *  a data de encerramento REAL — e é a AUSÊNCIA dela que mantém o ⚠️ trocar vivo. */
+function serieFimPrev(l){var d=serieDts(l);if(!d.ini)return '';var x=parseISO(d.ini);x.setDate(x.getDate()+d.meta*7);return isoOf(x);}
+/** Chips de duração do cabeçalho FECHADO: onde ele está + o intervalo. Três estados, porque
+ *  "semana 0 de 8" e um previsto numa série já encerrada seriam ruído. */
+function planoDurChips(l){
+  var d=serieDts(l),hoje=isoOf(TODAY),ses=serieSessoes(l.valor),c='';
+  if(!d.ini)c+='<span class="pl-kpi">sem data de início</span>';
+  else if(d.fim){
+    /* Encerrada: a duração que interessa é a REAL (o previsto perdeu a função). serieSemanas()
+       já usa `fim` quando existe — é a mesma conta, só muda o que ela responde. Real × meta é
+       exatamente o dado que ele quer na mão ao montar a próxima. */
+    c+='<span class="pl-kpi">durou <b>'+serieSemanas(l)+'</b> de '+d.meta+' sem</span>'+
+       '<span class="pl-kpi">'+dCurto(d.ini)+' → '+dCurto(d.fim)+'</span>';
+  }else if(d.ini>hoje){
+    /* Ainda não começou (é o caso do plano recém-importado): contar semana daria 0. */
+    c+='<span class="pl-kpi">começa <b>'+dCurto(d.ini)+'</b></span>'+
+       '<span class="pl-kpi">'+d.meta+' sem · até '+dCurto(serieFimPrev(l))+'</span>';
+  }else{
+    /* Em curso. N sai do MESMO serieSemanas() que alimenta o serieInfo() — duas superfícies,
+       uma conta. Piso em 1: no primeiro dia ela dá 0, e "semana 0" não existe. */
+    c+='<span class="pl-kpi">semana <b>'+Math.max(1,serieSemanas(l))+'</b> de '+d.meta+'</span>'+
+       '<span class="pl-kpi">'+dCurto(d.ini)+' → '+dCurto(serieFimPrev(l))+'</span>';
+  }
+  if(ses)c+='<span class="pl-kpi"><b>'+ses+'</b> '+(ses===1?'sessão':'sessões')+'</span>';
+  /* ⚠️ trocar fica no cabeçalho FECHADO: dentro do acordeão ele não alertaria ninguém.
+     Condição IDÊNTICA à do serieInfo() — uma regra, dois lugares. */
+  if(!d.fim&&serieSemanas(l)>=d.meta)c+='<span class="pl-kpi warn">⚠️ trocar</span>';
+  return c;
+}
+function saudePlanoHTML(){
+  return '<div class="grp-h" style="display:flex;align-items:center;gap:8px">🏋️ Plano da série'+
+    '<span style="flex:1"></span><button class="btn btn-sm" onclick="openPlanoImport()">＋ Importar plano</button></div>'+
+    '<div class="card" id="sauPlCard">'+sauPlInnerHTML()+'</div>';
+}
+function sauPlInnerHTML(){
+  var nAt=seriesByStatus('ativa').length,nEn=seriesByStatus('encerrada').length;
+  var h='<div class="pl-bar"><div class="seg">'+[['ativa','Ativas',nAt],['encerrada','Encerradas',nEn]].map(function(p){
+      return '<button class="'+(SAU_PL_ST===p[0]?'active':'')+'" onclick="sauPlSetSt(\''+p[0]+'\')">'+p[1]+' '+p[2]+'</button>';
+    }).join('')+'</div></div>';
+  /* Mais recente primeiro: a série que interessa é sempre a de cima, nos dois filtros. */
+  var list=seriesByStatus(SAU_PL_ST).slice().sort(function(a,b){var ai=serieDts(a).ini||'',bi=serieDts(b).ini||'';return ai<bi?1:(ai>bi?-1:0);});
+  if(!list.length)return h+'<div class="hempty">'+(SAU_PL_ST==='ativa'
+    ?'Nenhuma série ativa. Importe um plano em ＋ Importar plano, ou crie a série em Sistema › Séries de treino.'
+    :'Nenhuma série encerrada ainda.')+'</div>';
+  return h+list.map(planoAccHTML).join('');
+}
+function planoAccHTML(l){
+  var open=(PLANO_OPEN===l.id),id=esc(jsq(l.id));
+  return '<div class="pl-acc'+(open?' open':'')+'">'+
+    '<div class="pl-acc-h" role="button" tabindex="0" aria-expanded="'+(open?'true':'false')+'"'+
+      ' onclick="planoToggle(\''+id+'\')"'+
+      ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();planoToggle(\''+id+'\');}">'+
+      '<span class="pl-acc-c">'+(open?'▾':'▸')+'</span>'+
+      '<span class="pl-acc-t">'+esc(l.valor)+'</span>'+
+      /* ✎ abre o MESMO modal de Sistema › Séries de treino (openSerie). A edição continua
+         morando lá; aqui é só atalho — nenhum formulário duplicado. */
+      '<button class="icbtn pl-acc-ed" title="Editar a série (mesmo formulário de Sistema)" aria-label="Editar série"'+
+      ' onclick="event.stopPropagation();openSerie(\''+id+'\')">✎</button>'+
+      '<div class="pl-kpis pl-acc-k">'+planoDurChips(l)+'</div>'+
+    '</div>'+
+    (open?('<div class="pl-acc-b" id="plBody_'+esc(l.id)+'">'+planoBodyInner(l)+'</div>'):'')+
+  '</div>';
+}
+function planoBodyInner(l){
+  var dias=planoDias(l.id);
+  if(!dias.length)return '<div class="hempty">'+((l.pai||'ativa')==='encerrada'
+    ?'Esta série é anterior ao plano no Hub — resta a contagem de sessões. Se você ainda tiver o plano dela, cole em ＋ Importar plano com <b>este mesmo nome</b>: ele é anexado a esta série, que continua encerrada.'
+    :'Esta série ainda não tem plano no Hub — só a contagem de sessões. Cole o plano em ＋ Importar plano usando <b>este mesmo nome</b> e ele é anexado aqui, sem criar série nova nem mexer nas datas.')+'</div>';
+  var cur=planoDiaDe(l),id=esc(jsq(l.id));
+  return '<div class="pl-dias">'+dias.map(function(x){
+    return '<button class="pl-dia'+(x===cur?' active':'')+'" onclick="planoSetDia(\''+id+'\',\''+esc(jsq(x))+'\')">Dia '+esc(x)+'</button>';
+  }).join('')+'<span style="flex:1"></span><button class="btn btn-sm" onclick="planoCopiar(\''+id+'\',\''+esc(jsq(cur))+'\')">⧉ copiar</button></div>'+
+    planoDiaHTML(l,cur);
+}
+function planoDiaHTML(l,dia){
+  var bs=planoBlocos(l.id,dia);
+  if(!bs.length)return '<div class="hempty">Sem exercícios neste dia.</div>';
+  return bs.map(planoBlocoHTML).join('');
+}
+function planoBlocoHTML(b){
+  var t=PLANO_TIPOS[b.tipo]?b.tipo:'';
+  var h='<div class="pl-blk'+(t?(' '+t):'')+'"><div class="pl-blk-h"><span class="pl-blk-n">'+esc(String(b.n))+'</span>'+
+    '<span class="pl-blk-t">'+esc(b.titulo||PLANO_TIPOS[b.tipo]||'Bloco')+'</span>'+
+    (b.meta?'<span class="pl-blk-m">'+esc(b.meta)+'</span>':'')+'</div>'+
+    '<div class="pl-tw"><table class="pl-tb"><thead><tr><th>Exercício</th><th class="num">Séries</th>'+
+    '<th class="num">Reps</th><th class="num">Carga</th><th>Execução</th></tr></thead><tbody>';
+  b.itens.forEach(function(p){
+    h+='<tr><td class="pl-td-ex" data-l="Exercício"><span class="pl-ex">'+esc(p.ex)+'</span>'+
+      (p.alias?'<span class="pl-alias">'+esc(p.alias)+'</span>':'')+'</td>'+
+      /* O <b> só sai quando HÁ valor: `<td><b></b></td>` NÃO casa `:empty` (o <b> é um nó filho),
+         e a célula voltava a pintar o rótulo "SÉRIES" órfão — as outras três colunas escapam
+         porque emitem o texto direto. Vazio precisa ser vazio de verdade. */
+      '<td class="num" data-l="Séries">'+(p.sets?('<b>'+esc(p.sets)+'</b>'):'')+'</td>'+
+      '<td class="num" data-l="Reps">'+esc(p.reps)+'</td>'+
+      '<td class="num" data-l="Carga">'+esc(p.carga)+'</td>'+
+      '<td class="pl-obs" data-l="Execução">'+esc(p.obs)+'</td></tr>';
+  });
+  return h+'</tbody></table></div></div>';
+}
+/** Texto plano do dia, para digitar no relógio: exercício · séries × reps · carga · execução. */
+function planoTexto(l,dia){
+  var out=[l.valor+' — dia '+dia];
+  planoBlocos(l.id,dia).forEach(function(b){
+    out.push('');
+    out.push(b.n+') '+(b.titulo||'')+(b.meta?(' — '+b.meta):''));
+    b.itens.forEach(function(p){
+      var parts=[p.ex],sr=[];
+      if(p.sets)sr.push(p.sets);
+      if(p.reps)sr.push(p.reps);
+      if(sr.length)parts.push(sr.join(' x '));
+      if(p.carga)parts.push(p.carga);
+      if(p.alias)parts.push('alt.: '+p.alias);
+      out.push('- '+parts.join(' · '));
+      if(p.obs)out.push('  '+p.obs);
+    });
+  });
+  return out.join('\n');
+}
+function planoCopiar(serieId,dia){
+  var l=cfgById(serieId);
+  if(!l||!dia){toast('Nada para copiar');return;}
+  var txt=planoTexto(l,dia);
+  /* Fallback do execCommand: dentro do iframe do Apps Script a Clipboard API costuma
+     ser bloqueada, e sem isto o botão falharia calado justo no celular. */
+  function fb(){
+    var t=document.createElement('textarea');
+    t.value=txt;t.setAttribute('readonly','');t.style.position='fixed';t.style.top='-1000px';
+    document.body.appendChild(t);t.select();
+    var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+    document.body.removeChild(t);
+    toast(ok?('Dia '+dia+' copiado'):'Não consegui copiar por aqui');
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast('Dia '+dia+' copiado');},fb);
+  else fb();
+}
+/* O histórico das séries encerradas NÃO tem bloco próprio: é o mesmo bloco acima, com o filtro
+ * em "Encerradas" — série encerrada é a mesma coisa com outro status, e duas superfícies para
+ * um conceito só divergem na primeira manutenção. Nenhuma inferência de parentesco entre
+ * nomes: sufixo de nome é convenção do dono, não contrato do schema. */
 
 /* ============================ HOME (Início) ============================
  * Clima + destaque da agenda vêm do próprio app (WX/EVENTS). Esportes, mercado, radar e
