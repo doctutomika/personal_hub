@@ -791,10 +791,54 @@ a{color:inherit}
 .sau-lssel{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:#fff;
   color:var(--ink);font-size:13px;font-weight:600;font-family:inherit}
 .sau-lssel:focus{outline:none;border-color:var(--ind2);box-shadow:0 0 0 3px rgba(61,67,162,.13)}
-.sau-lspg{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;padding-top:9px;
+/* Barra de filtro dos TREINOS: mesma gramática da de lesões (período no .seg + filtro
+   secundário ao lado), com chips de modalidade em vez de <select> — são poucos e o dono
+   os toca no celular. `flex-wrap` nos DOIS níveis de propósito: a barra quebra entre o
+   .seg e os chips, e os chips quebram entre si. É isso que dá 0 overflow em 320px. */
+.sau-trbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.sau-trseg{flex:0 0 auto}
+.sau-trmods{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+
+/* PÍLULA compartilhada com os dias A/B do plano (.pl-dia) — UMA regra só, de propósito:
+   é o mesmo objeto de interface (chip de filtro) e é o visual que o dono aprovou lá.
+   Mexer aqui muda os dois lugares; se um dia precisarem divergir, separe explicitamente
+   em vez de clonar valores (foi o clone que deixou os treinos sem estilo nenhum). */
+.pl-dia,.sau-trmod{border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  font-weight:700;font-size:12.5px;padding:6px 13px;border-radius:999px;line-height:1.25}
+.pl-dia{display:inline-block}
+.sau-trmod{display:inline-flex;align-items:center;gap:7px;max-width:100%;text-align:left}
+.pl-dia.active,.sau-trmod.active{background:var(--ind2);border-color:var(--ind2);color:var(--surface)}
+.sau-trmod:hover{border-color:var(--ind2)}
+.sau-trmod.active:hover{border-color:var(--ind1)}
+.sau-trmod:focus-visible{outline:2px solid var(--ind2);outline-offset:2px}
+.sau-trmod-l{min-width:0;overflow-wrap:anywhere}
+/* Contador como BADGE, nunca colado no rótulo ("Todas15" era ilegível). Mesmo badge nos
+   dois blocos da aba — o dono lê treinos e lesões na mesma tela e divergir ali parece bug. */
+.sau-trmod-n,.sau-lsst-n{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--muted);
+  background:var(--ind-soft);border-radius:999px;padding:1px 6px;min-width:27px;
+  /* 27px cobre DOIS digitos. Com 19px (1 digito) o chip crescia 7,46px ao passar de
+     contagem 1-digito para 2 — visivel ao alternar Semana<->Mes, que e justamente a
+     interacao mais frequente da barra. `tabular-nums` so estabiliza DENTRO do mesmo
+     numero de digitos; quem trava a largura entre eles e o min-width. Medido pelo QA. */
+  text-align:center;font-variant-numeric:tabular-nums}
+.sau-trmod.active .sau-trmod-n{background:var(--ind1);color:var(--surface)}
+/* Modalidade sem sessão NO PERÍODO fica na barra, apagada — não some: sumir mudaria a
+   largura da barra a cada filtro e o dono perderia a referência de onde clicar.
+   `:not(.active)` porque o chip selecionado pode legitimamente marcar 0 (e aí quem manda
+   é o estado ativo, senão o filtro corrente vira o item mais apagado da tela). */
+.sau-trmod.zero:not(.active){opacity:.45}
+.sau-trmod.zero:not(.active) .sau-trmod-n{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.sau-lsbar .seg button{display:inline-flex;align-items:center;gap:6px}
+.seg button.active .sau-lsst-n{color:var(--ind0)}
+
+/* Paginação: regra ÚNICA para lesões e treinos. O `disabled` vem do render (extremo da
+   lista); o CSS só precisa fazer o botão PARECER desabilitado — antes parecia clicável
+   e não fazia nada, que é pior do que estar apagado. */
+.sau-lspg,.sau-trpg{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;padding-top:9px;
   border-top:1px dashed var(--line);font-size:12px;color:var(--muted)}
-.sau-lspg-n{margin-left:auto}
-.sau-lspg .icbtn:disabled{opacity:.38;cursor:default;border-color:var(--line);color:var(--muted)}
+.sau-lspg-n,.sau-trpg-n{margin-left:auto}
+.sau-lspg .icbtn:disabled,.sau-trpg .icbtn:disabled{opacity:.38;cursor:not-allowed;
+  border-color:var(--line);color:var(--muted)}
 
 /* Treinos em CARDS: grade que embrulha (nunca rola na horizontal — minmax + auto-fill).
    O card inteiro é o botão (abre o openRpe); min-width:0 deixa texto longo quebrar. */
@@ -827,6 +871,13 @@ a{color:inherit}
   .sau-row-d{flex-basis:46px}
   .sau-ins-d{margin-left:0}
   .sau-ready-grid{flex-direction:column;gap:14px}
+  /* Chips de modalidade no aparelho do dono (~430px → ~366px úteis dentro do card):
+     são 5 chips, então aperta corpo e respiro para caber 2–3 por linha. Quem garante o
+     "não estoura" continua sendo o flex-wrap — isto só reduz o nº de linhas. */
+  .sau-trbar{gap:8px}
+  .sau-trmods{gap:5px}
+  .sau-trmod{font-size:12px;padding:5px 10px;gap:6px}
+  .sau-trmod-n{font-size:10.5px;padding:1px 5px;min-width:25px}   /* idem, na escala mobile */
 }
 
 /* ===== PLANO DE TREINO (Saúde › Treinos) =====
@@ -857,9 +908,9 @@ a{color:inherit}
 .pl-kpi b{color:var(--ind1);font-variant-numeric:tabular-nums}
 .pl-kpi.warn{background:#FDF3E0;color:#9A6510;font-weight:700}
 .pl-dias{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
-.pl-dia{border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:700;font-size:12.5px;
-  padding:6px 13px;border-radius:999px;display:inline-block}
-.pl-dia.active{background:var(--ind2);border-color:var(--ind2);color:#fff}
+/* `.pl-dia` (a pílula em si) mora no bloco da Saúde acima, junto com `.sau-trmod`: os
+   chips de modalidade dos treinos usam o MESMO visual e a regra é uma só. Não redeclare
+   aqui — redeclarar é como os treinos ficaram sem estilo em primeiro lugar. */
 .pl-blk{border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
 .pl-blk:last-child{margin-bottom:0}
 .pl-blk-h{display:flex;align-items:center;gap:9px;padding:9px 12px;background:#FAFBFE;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -1054,7 +1105,7 @@ a{color:inherit}
 })();
 
 /* SemVer X.Y.Z — bump pelo hub-release; ver CLAUDE.md. Rodapé + clasp -d usam este número. */
-var APP_VERSION='3.18.0';
+var APP_VERSION='3.18.1';
 /* ============================ DADOS / SEED ============================ */
 var MARK='<defs><radialGradient id="sbg" cx="34%" cy="50%" r="80%"><stop offset="0%" stop-color="#CDD1EC"/><stop offset="100%" stop-color="#B9BFE0"/></radialGradient></defs><rect x="4" y="4" width="112" height="112" rx="26" fill="url(#sbg)" stroke="#A9AFD6" stroke-width="1.5"/>__FAN__<circle cx="34" cy="60" r="6.2" fill="#23286B"/>';
 (function buildMark(){
@@ -3127,8 +3178,10 @@ function sauTrInnerHTML(){
   per.forEach(function(e){var m=treinoModal(e);cnt[m]=(cnt[m]||0)+1;});
   var mods=Object.keys(tot).sort(function(a,b){return tot[b]-tot[a]||(a<b?-1:(a>b?1:0));});
   function modBtn(v,lbl,n){
+    /* rótulo em <span> próprio: o chip é flex, e só um ELEMENTO aceita min-width:0 +
+       overflow-wrap — sem ele uma modalidade de nome longo estouraria a largura do card. */
     return '<button class="sau-trmod'+(SAU_TR_MOD===v?' active':'')+(n?'':' zero')+'" onclick="sauTrSetMod(\''+esc(jsq(v))+'\')">'+
-      esc(lbl)+'<span class="sau-trmod-n">'+n+'</span></button>';
+      '<span class="sau-trmod-l">'+esc(lbl)+'</span><span class="sau-trmod-n">'+n+'</span></button>';
   }
   var h='<div class="sau-trbar"><div class="seg sau-trseg">'+
     [['semana','Semana'],['mes','Mês'],['tudo','Tudo']].map(function(p){
@@ -3615,7 +3668,9 @@ function sauLsInnerHTML(){
   var nAt=0,nRe=0;
   mes.forEach(function(l){if(l.status==='ativa')nAt++;else nRe++;});
   function stBtn(v,lbl,n){
-    return '<button class="'+(SAU_LS_ST===v?'active':'')+'" onclick="sauLsSetSt(\''+v+'\')">'+esc(lbl)+' '+n+'</button>';
+    /* contador em badge (mesma classe-irmã do chip de treinos): "Ativas 3" com o número
+       solto no texto lia como parte do rótulo. Só apresentação — o filtro não muda. */
+    return '<button class="'+(SAU_LS_ST===v?'active':'')+'" onclick="sauLsSetSt(\''+v+'\')">'+esc(lbl)+'<span class="sau-lsst-n">'+n+'</span></button>';
   }
   var sel='<select class="sau-lssel" aria-label="Filtrar lesões por mês" onchange="sauLsSetMes(this.value)">'+
     '<option value="*"'+(SAU_LS_MES==='*'?' selected':'')+'>Todos os meses</option>'+
