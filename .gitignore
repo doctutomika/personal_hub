@@ -8,9 +8,12 @@
 /state/
 /signals/
 
-# Nenhum .json de dados deve subir; abrimos exceção só pro manifest do PWA.
+# Nenhum .json de dados deve subir; abrimos exceção só pro manifest do PWA
+# e pro vercel.json, que é CONFIGURAÇÃO de hospedagem e não carrega dado.
+# A regra continua a mesma: exceção é nominal, nunca por padrão.
 *.json
 !docs/manifest.json
+!vercel.json
 
 build-web.mjs
 app-v2.html
